@@ -1,16 +1,17 @@
 import streamlit as st
+from huggingface_hub import InferenceClient
 import requests
-import base64
+from PIL import Image
+import io
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
-st.title("🏠 Söve Oturucu Pro - Gerçek Grok Imagine")
+st.title("🏠 Söve Oturucu Pro - Ücretsiz Hugging Face AI")
 
-# Sidebar - API Key
+# Sidebar - HF Token
 with st.sidebar:
-    st.header("🔑 Ayarlar")
-    fal_api_key = st.text_input("fal.ai API Key", type="password", 
-                                help="fal.ai → Dashboard → API Keys → Yeni key oluştur")
-    st.caption("Ücretsiz hesap aç, key al (ilk krediler bedava).")
+    st.header("🔑 Hugging Face Token")
+    hf_token = st.text_input("HF Access Token (hf_ ile başlayan)", type="password")
+    st.caption("huggingface.co/settings/tokens adresinden ücretsiz al.")
 
 col1, col2 = st.columns([3, 2])
 
@@ -21,67 +22,52 @@ with col1:
         st.image(building_file, caption="Yüklenen Bina", use_column_width=True)
 
 with col2:
-    st.subheader("📚 Söve Kütüphanesi")
-    sove_options = {
-        "Modern Beyaz Söve": "Modern Beyaz Söve",
-        "Klasik Ahşap Söve": "Klasik Ahşap Söve",
-        "Siyah Metal Çerçeve": "Siyah Metal Çerçeve",
-        "Lüks Taş Görünümlü": "Lüks Taş Görünümlü",
-        "Minimal Gri Söve": "Minimal Gri Söve"
-    }
-    selected_sove_name = st.selectbox("Hazır söve seç", list(sove_options.keys()))
-    st.caption(f"Seçilen: **{selected_sove_name}**")
-    
-    st.divider()
-    st.subheader("Veya kendi söveni yükle (PNG)")
-    custom_sove = st.file_uploader("Şeffaf PNG", type=["png"])
+    st.subheader("📚 Söve Seçimi")
+    sove_name = st.selectbox("Söve tipi seç", [
+        "Modern Beyaz Söve", "Klasik Ahşap Söve", "Siyah Metal Çerçeve",
+        "Lüks Taş Görünümlü", "Minimal Gri Söve"
+    ])
+    st.caption(f"Seçilen: **{sove_name}**")
 
-if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_container_width=True):
+if st.button("🔥 SÖVEYİ OTURT - Ücretsiz AI ile", type="primary", use_container_width=True):
     if not building_file:
-        st.error("❌ Lütfen bina fotoğrafı yükleyin!")
-    elif not fal_api_key or fal_api_key.strip() == "":
-        st.error("❌ fal.ai API Key girin (sol taraftaki sidebar'dan)")
+        st.error("❌ Bina fotoğrafı yükleyin!")
+    elif not hf_token or "hf_" not in hf_token:
+        st.error("❌ Hugging Face token girin!")
     else:
-        with st.spinner("Grok Imagine çalışıyor... Pencerelere mükemmel perspektif, ışık ve gölge uyumu yapılıyor..."):
+        with st.spinner("Qwen Image Edit çalışıyor... Pencerelere perspektif + ışık + gölge uyumu yapılıyor (gerçek AI!)"):
             try:
-                # Bina resmini base64'e çevir
+                client = InferenceClient(token=hf_token)
+                
+                # Bina resmini byte yap
                 building_bytes = building_file.getvalue()
-                building_b64 = base64.b64encode(building_bytes).decode()
+                
+                # Güçlü prompt (söve oturtma için optimize edildi)
+                prompt = f"Bu binadaki TÜM pencerelere {sove_name} modelini mükemmel perspektif, doğru orantı, gerçekçi ışık, gölge, cam yansıması ve kusursuz blending ile oturt. Söve orijinal detaylarını koru. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
 
-                prompt = f"Bu binadaki TÜM pencerelere {selected_sove_name} modelini mükemmel perspektif, foreshortening, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
-
-                # Düzeltilmiş endpoint (fal.run)
-                response = requests.post(
-                    "https://fal.run/xai/grok-imagine-image/edit",
-                    json={
-                        "image_url": f"data:image/jpeg;base64,{building_b64}",
-                        "prompt": prompt,
-                        "num_images": 1
-                    },
-                    headers={
-                        "Authorization": f"Key {fal_api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    timeout=180
+                # Qwen Image Edit ile çağrı
+                result = client.image_to_image(
+                    model="Qwen/Qwen-Image-Edit",
+                    image=building_bytes,
+                    prompt=prompt,
+                    guidance_scale=7.5,
+                    num_inference_steps=30
                 )
-
-                if response.status_code == 200:
-                    result = response.json()
-                    image_url = result.get("images", [{}])[0].get("url")
-                    if image_url:
-                        img_data = requests.get(image_url).content
-                        st.image(img_data, caption="✅ Grok Imagine ile oturtuldu!", use_column_width=True)
-                        st.download_button(
-                            label="📥 Sonucu İndir (JPG)",
-                            data=img_data,
-                            file_name="sove_oturtulmus_grok.jpg",
-                            mime="image/jpeg"
-                        )
-                    else:
-                        st.error("Sonuç alınamadı.")
-                else:
-                    st.error(f"API Hatası: {response.status_code} - {response.text[:300]}")
+                
+                # Sonucu göster
+                st.image(result, caption="✅ Ücretsiz AI ile oturtuldu!", use_column_width=True)
+                
+                # İndirme
+                buf = io.BytesIO()
+                result.save(buf, format="JPEG")
+                st.download_button(
+                    label="📥 Sonucu İndir (JPG)",
+                    data=buf.getvalue(),
+                    file_name="sove_oturtulmus.jpg",
+                    mime="image/jpeg"
+                )
+                
             except Exception as e:
-                st.error(f"Bağlantı hatası: {str(e)}")
+                st.error(f"Hata: {str(e)} - Token’ını veya internet bağlantını kontrol et.")
 
-st.caption("✅ Artık gerçek Grok Imagine kullanıyorsun. Hata alırsan fal.ai key’ini kontrol et.")
+st.caption("✅ Bu tamamen ücretsiz Hugging Face AI’dir. Günlük limitin biterse ertesi gün devam edersin.")
