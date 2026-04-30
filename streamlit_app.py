@@ -1,5 +1,6 @@
 import streamlit as st
 import replicate
+from replicate import files
 import io
 from PIL import Image
 
@@ -38,15 +39,15 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
                 client = replicate.Client(api_token=replicate_token)
                 building_bytes = building_file.getvalue()
 
-                # ÖNEMLİ: Bytes'i önce Replicate'e upload et
-                image_url = client.upload(building_bytes, filename="building.jpg")
+                # Resmi Replicate'e yükle (doğru yöntem)
+                image_url = files.upload(building_bytes)
 
                 prompt = f"Bu binadaki TÜM pencerelere {sove_name} modelini mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. Söve orijinal detaylarını koru. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
 
                 output = client.run(
-                    "black-forest-labs/flux-dev",   # Daha stabil image-to-image modeli
+                    "black-forest-labs/flux-1.1-pro",
                     input={
-                        "image": image_url,         # URL olarak gönderiyoruz
+                        "image": image_url,
                         "prompt": prompt,
                         "num_outputs": 1,
                         "aspect_ratio": "1:1",
@@ -72,4 +73,4 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 Railway + FLUX.2 ile çalışıyor. Token girip dene!")
+st.caption("🚀 Artık Railway + FLUX.2 ile çalışıyor. Token girip dene!")
