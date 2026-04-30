@@ -2,11 +2,24 @@ import streamlit as st
 import requests
 import base64
 
-VERSION = "v1.7 - 30 Nisan 2026 - Önizleme + Çentik Düzeltmesi"
+VERSION = "v1.8 - 30 Nisan 2026"
 
-st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
-st.title("🏠 Söve Oturucu Pro - Grok Imagine (xAI Resmi)")
-st.caption(f"**Versiyon:** {VERSION}")
+st.set_page_config(page_title="Söve Oturucu", page_icon="🏠", layout="wide")
+
+# Profesyonel başlık alanı
+st.markdown(f"""
+<div style="text-align:center; margin-bottom:10px;">
+    <h2 style="margin:0;">Söve Oturucu</h2>
+    <small style="color:#666;">Versiyon: {VERSION}</small>
+</div>
+""", unsafe_allow_html=True)
+
+# Firma logosu alanı (istediğin zaman buraya logo URL'si koyabilirsin)
+st.markdown("""
+<div style="text-align:center; margin-bottom:20px;">
+    <img src="https://via.placeholder.com/300x80/ffffff/000000?text=Sovetalya+Logo" style="max-width:300px;">
+</div>
+""", unsafe_allow_html=True)
 
 with st.sidebar:
     st.header("🔑 xAI API Key")
@@ -32,9 +45,9 @@ with col2:
     )
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
-    # Önizleme görseli (sove_images klasöründeki gerçek fotoğraflar)
+    # Gerçek ürün önizlemesi (sove_images klasöründen)
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/sove_{selected_code}.jpg"
-    st.image(preview_url, caption=f"{selected_code} - Gerçek Sovetalya Ürünü", use_container_width=True)
+    st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün Fotoğrafı", use_container_width=True)
 
 if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_container_width=True):
     if not building_file:
@@ -47,12 +60,12 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
 
+                # ESKİ ve ETKİLİ PROMPT (istediğin gibi)
                 prompt = f"""
                 Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS söve modelini 
-                mükemmel perspektif, tam orantılı, gerçekçi ışık ve gölge, cam yansıması ile oturt. 
-                Söve kenarları tamamen temiz, keskin ve pürüzsüz olsun. Hiç çentik, kırık veya jagged edge olmasın. 
-                Seamless blending mükemmel olsun. Söve tam olarak orijinal ürün gibi dursun. 
-                Binada başka hiçbir şeyi değiştirme. Çok profesyonel mimari render kalitesinde olsun.
+                mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. 
+                Söve tam olarak orijinal ürün gibi dursun. Binada başka hiçbir şeyi değiştirme. 
+                Çok profesyonel mimari render kalitesinde olsun.
                 """
 
                 response = requests.post(
