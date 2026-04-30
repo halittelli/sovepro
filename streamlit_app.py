@@ -2,18 +2,18 @@ import streamlit as st
 import requests
 import base64
 
-VERSION = "v1.4 - Debug Mod - 30 Nisan 2026"
+VERSION = "v1.5 - 30 Nisan 2026 - Stabil Grok Imagine"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 st.title("🏠 Söve Oturucu Pro - Grok Imagine (xAI Resmi)")
-st.caption(f"**Versiyon:** {VERSION} | API Response Debug Aktif")
+st.caption(f"**Versiyon:** {VERSION}")
 
 with st.sidebar:
     st.header("🔑 xAI API Key")
     xai_api_key = st.text_input(
         "xAI API Key", 
         type="password",
-        help="console.x.ai → API Keys → kopyala ve buraya yapıştır"
+        help="console.x.ai → API Keys → buradan kopyala"
     )
 
 col1, col2 = st.columns([3, 2])
@@ -41,16 +41,16 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
     elif not xai_api_key:
         st.error("❌ Lütfen xAI API Key girin!")
     else:
-        with st.spinner("Grok Imagine çalışıyor..."):
+        with st.spinner("Grok Imagine çalışıyor... (15-40 saniye)"):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS söve modelini 
-                mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. 
-                Söve tam olarak orijinal ürün gibi dursun. Binada başka hiçbir şeyi değiştirme. 
-                Çok profesyonel mimari render kalitesinde olsun.
+                Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS dekoratif söve modelini 
+                mükemmel perspektif, tam orantılı, gerçekçi ışık ve gölge, cam yansıması ve kusursuz seamless blending ile oturt. 
+                Söve tam olarak orijinal ürün gibi dursun, kenarları net ve temiz olsun. 
+                Binada başka hiçbir şeyi değiştirme. Çok profesyonel mimari render kalitesinde olsun.
                 """
 
                 response = requests.post(
@@ -68,22 +68,16 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                     }
                 )
 
-                # === DEBUG: API'den ne geldiğini görelim ===
-                st.subheader("🔍 API Debug Bilgisi")
-                st.json(response.json())
-
                 if response.status_code == 200:
                     result = response.json()
-                    # Tüm olası anahtarları kontrol et
+                    # Yeni response yapısına göre düzeltilmiş parse
                     image_url = None
-                    if "output" in result and isinstance(result["output"], dict):
+                    if "data" in result and isinstance(result["data"], list) and len(result["data"]) > 0:
+                        image_url = result["data"][0].get("url")
+                    elif "output" in result and isinstance(result["output"], dict):
                         image_url = result["output"].get("url")
                     elif "url" in result:
                         image_url = result.get("url")
-                    elif "data" in result and isinstance(result["data"], list):
-                        image_url = result["data"][0].get("url")
-                    elif "images" in result and isinstance(result["images"], list):
-                        image_url = result["images"][0].get("url")
 
                     if image_url:
                         img_data = requests.get(image_url).content
@@ -97,11 +91,11 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                             mime="image/jpeg"
                         )
                     else:
-                        st.error("❌ Sonuç URL'si API'den alınamadı. Yukarıdaki JSON'da 'url' anahtarı var mı kontrol et.")
+                        st.error("Sonuç URL'si alınamadı. Lütfen tekrar deneyin.")
                 else:
-                    st.error(f"API Hatası: {response.status_code} - {response.text[:500]}")
+                    st.error(f"API Hatası: {response.status_code} - {response.text[:400]}")
 
             except Exception as e:
-                st.error(f"Genel Hata: {str(e)}")
+                st.error(f"Hata: {str(e)}")
 
-st.caption(f"**Versiyon:** {VERSION}")
+st.caption(f"**Versiyon:** {VERSION} | Grok Imagine xAI resmi altyapısı")
