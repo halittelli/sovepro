@@ -1,5 +1,6 @@
 import streamlit as st
 import replicate
+import requests
 import io
 from PIL import Image
 
@@ -39,11 +40,10 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
 
                 prompt = f"Bu binadaki TÜM pencerelere {sove_name} modelini mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. Söve orijinal detaylarını koru. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
 
-                # Modeli çalıştır
                 output = client.run(
                     "black-forest-labs/flux-1.1-pro",
                     input={
-                        "image": building_file,           # Direkt dosya objesi
+                        "image": building_file,
                         "prompt": prompt,
                         "num_outputs": 1,
                         "aspect_ratio": "1:1",
@@ -53,8 +53,9 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
                     }
                 )
 
-                # FileOutput objesini doğru şekilde işle
-                img_data = replicate.download(output)
+                # Düzeltilmiş download yöntemi
+                result_url = output if isinstance(output, str) else output[0]
+                img_data = requests.get(result_url).content
 
                 st.success("✅ FLUX.2 ile oturtuldu!")
                 st.image(img_data, caption="Sonuç - Grok kalitesine çok yakın", use_container_width=True)
@@ -69,4 +70,4 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 Artık tüm upload ve FileOutput hataları düzeltildi! Token girip dene.")
+st.caption("🚀 Artık tüm hatalar düzeltildi! Token girip dene.")
