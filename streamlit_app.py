@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import base64
 
-VERSION = "v1.5 - 30 Nisan 2026 - Stabil Grok Imagine"
+VERSION = "v1.6 - 30 Nisan 2026 - Ürün Önizleme İyileştirildi"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 st.title("🏠 Söve Oturucu Pro - Grok Imagine (xAI Resmi)")
@@ -13,7 +13,7 @@ with st.sidebar:
     xai_api_key = st.text_input(
         "xAI API Key", 
         type="password",
-        help="console.x.ai → API Keys → buradan kopyala"
+        help="console.x.ai → API Keys → kopyala ve buraya yapıştır"
     )
 
 col1, col2 = st.columns([3, 2])
@@ -26,14 +26,17 @@ with col1:
 
 with col2:
     st.subheader("📚 Sovetalya Söve Kütüphanesi")
+    
     tc_codes = (
         [f"TC{i:03d}" for i in range(1, 25)] + 
         [f"TC{i:03d}" for i in range(35, 41)]
     )
+    
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
+    # Gerçek ürün fotoğrafı (sove_images klasöründen)
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
-    st.image(preview_url, caption=f"{selected_code} - Sovetalya Söve", use_container_width=True)
+    st.image(preview_url, caption=f"{selected_code} - Gerçek Sovetalya Ürünü", use_container_width=True)
 
 if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_container_width=True):
     if not building_file:
@@ -47,32 +50,26 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS dekoratif söve modelini 
-                mükemmel perspektif, tam orantılı, gerçekçi ışık ve gölge, cam yansıması ve kusursuz seamless blending ile oturt. 
-                Söve tam olarak orijinal ürün gibi dursun, kenarları net ve temiz olsun. 
-                Binada başka hiçbir şeyi değiştirme. Çok profesyonel mimari render kalitesinde olsun.
+                Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS söve modelini 
+                mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. 
+                Söve tam olarak orijinal ürün gibi dursun. Binada başka hiçbir şeyi değiştirme. 
+                Çok profesyonel mimari render kalitesinde olsun.
                 """
 
                 response = requests.post(
                     "https://api.x.ai/v1/images/edits",
-                    headers={
-                        "Authorization": f"Bearer {xai_api_key}",
-                        "Content-Type": "application/json"
-                    },
+                    headers={"Authorization": f"Bearer {xai_api_key}", "Content-Type": "application/json"},
                     json={
                         "model": "grok-imagine-image",
                         "prompt": prompt,
-                        "image": {
-                            "url": f"data:image/jpeg;base64,{building_b64}"
-                        }
+                        "image": {"url": f"data:image/jpeg;base64,{building_b64}"}
                     }
                 )
 
                 if response.status_code == 200:
                     result = response.json()
-                    # Yeni response yapısına göre düzeltilmiş parse
                     image_url = None
-                    if "data" in result and isinstance(result["data"], list) and len(result["data"]) > 0:
+                    if "data" in result and len(result["data"]) > 0:
                         image_url = result["data"][0].get("url")
                     elif "output" in result and isinstance(result["output"], dict):
                         image_url = result["output"].get("url")
@@ -91,11 +88,11 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                             mime="image/jpeg"
                         )
                     else:
-                        st.error("Sonuç URL'si alınamadı. Lütfen tekrar deneyin.")
+                        st.error("Sonuç URL'si alınamadı. Tekrar deneyin.")
                 else:
-                    st.error(f"API Hatası: {response.status_code} - {response.text[:400]}")
+                    st.error(f"API Hatası: {response.status_code}")
 
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption(f"**Versiyon:** {VERSION} | Grok Imagine xAI resmi altyapısı")
+st.caption(f"**Versiyon:** {VERSION}")
