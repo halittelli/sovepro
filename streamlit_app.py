@@ -3,7 +3,7 @@ import requests
 import base64
 import os
 
-VERSION = "v2.1 - 30 Nisan 2026"
+VERSION = "v2.3 - 30 Nisan 2026 - Kartlı Ürün Seçimi"
 
 st.set_page_config(page_title="Evimde Gör", page_icon="🏠", layout="wide")
 
@@ -22,21 +22,38 @@ with col1:
 
 with col2:
     st.subheader("📚 ÜRÜNLER")
+
     tc_codes = (
         [f"TC{i:03d}" for i in range(1, 25)] + 
         [f"TC{i:03d}" for i in range(35, 41)]
     )
-    selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
-    # DÜZELTİLDİ: Dosyalar root'ta olduğu için sove_images klasörü kaldırıldı
-    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
-    st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün Fotoğrafı", use_container_width=True)
+    # Kartlar ile ürün seçimi
+    selected_code = None
+    cols = st.columns(4)  # 4 sütunlu grid
+
+    for i, code in enumerate(tc_codes):
+        with cols[i % 4]:
+            preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{code}.png"
+            if st.button(f"{code}", key=code, use_container_width=True):
+                selected_code = code
+            st.image(preview_url, use_column_width=True)
+
+    # Seçilen ürünün büyük önizlemesi
+    if selected_code:
+        st.success(f"Seçilen: **{selected_code}**")
+        preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
+        st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün Fotoğrafı", use_container_width=True)
+    else:
+        st.info("Lütfen yukarıdan bir ürün seçin")
 
 if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
+    elif not selected_code:
+        st.error("❌ Lütfen bir söve ürünü seçin!")
     elif not XAI_API_KEY:
-        st.error("❌ API Key bulunamadı. Railway Variables'a XAI_API_KEY ekleyin.")
+        st.error("❌ API Key bulunamadı.")
     else:
         with st.spinner(""):
             try:
