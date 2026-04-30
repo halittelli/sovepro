@@ -1,6 +1,5 @@
 import streamlit as st
 import replicate
-from replicate import files
 import io
 from PIL import Image
 
@@ -39,8 +38,8 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
                 client = replicate.Client(api_token=replicate_token)
                 building_bytes = building_file.getvalue()
 
-                # ✅ DÜZELTİLMİŞ UPLOAD YÖNTEMİ
-                image_url = files.upload(building_bytes)
+                # ✅ EN STABİL UPLOAD YÖNTEMİ (Client üzerinden)
+                image_url = client.files.upload(building_bytes)
 
                 prompt = f"Bu binadaki TÜM pencerelere {sove_name} modelini mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. Söve orijinal detaylarını koru. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
 
