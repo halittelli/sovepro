@@ -3,7 +3,7 @@ import requests
 import base64
 import os
 
-VERSION = "v2.3 - 30 Nisan 2026 - Kartlı Ürün Seçimi"
+VERSION = "v2.3 - 30 Nisan 2026 - Hatasız Önizleme"
 
 st.set_page_config(page_title="Evimde Gör", page_icon="🏠", layout="wide")
 
@@ -22,36 +22,26 @@ with col1:
 
 with col2:
     st.subheader("📚 ÜRÜNLER")
-
+    
     tc_codes = (
         [f"TC{i:03d}" for i in range(1, 25)] + 
         [f"TC{i:03d}" for i in range(35, 41)]
     )
+    
+    selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
-    # Kartlar ile ürün seçimi
-    selected_code = None
-    cols = st.columns(4)  # 4 sütunlu grid
-
-    for i, code in enumerate(tc_codes):
-        with cols[i % 4]:
-            preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{code}.png"
-            if st.button(f"{code}", key=code, use_container_width=True):
-                selected_code = code
-            st.image(preview_url, use_column_width=True)
-
-    # Seçilen ürünün büyük önizlemesi
-    if selected_code:
-        st.success(f"Seçilen: **{selected_code}**")
-        preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
-        st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün Fotoğrafı", use_container_width=True)
-    else:
-        st.info("Lütfen yukarıdan bir ürün seçin")
+    # DÜZELTİLDİ: Resimler root klasörde olduğu için direkt main/{code}.png
+    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
+    
+    # Küçük önizleme (selectbox yanında)
+    st.image(preview_url, caption=f"{selected_code} - Küçük Önizleme", width=180)
+    
+    # Büyük önizleme (altında)
+    st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün Fotoğrafı", use_container_width=True)
 
 if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
-    elif not selected_code:
-        st.error("❌ Lütfen bir söve ürünü seçin!")
     elif not XAI_API_KEY:
         st.error("❌ API Key bulunamadı.")
     else:
