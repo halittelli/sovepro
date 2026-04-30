@@ -1,16 +1,16 @@
 import streamlit as st
-import replicate
 import requests
+import base64
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
-st.title("🏠 Söve Oturucu Pro - Gerçek Sovetalya Modelleri")
+st.title("🏠 Söve Oturucu Pro - Grok Imagine (xAI Kendi Altyapısı)")
 
 with st.sidebar:
-    st.header("🔑 Replicate API Token")
-    replicate_token = st.text_input(
-        "Replicate Token", 
+    st.header("🔑 xAI Grok Imagine API Key")
+    xai_api_key = st.text_input(
+        "xAI API Key", 
         type="password",
-        help="replicate.com/account/api-tokens adresinden kopyala ve buraya yapıştır"
+        help="console.x.ai adresinden SuperGrok hesabınla API Key al ve buraya yapıştır"
     )
 
 col1, col2 = st.columns([3, 2])
@@ -23,26 +23,25 @@ with col1:
 
 with col2:
     st.subheader("📚 Sovetalya Söve Kütüphanesi")
-
     tc_codes = (
         [f"TC{i:03d}" for i in range(1, 25)] + 
         [f"TC{i:03d}" for i in range(35, 41)]
     )
-
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
     st.image(preview_url, caption=f"{selected_code} - Sovetalya Söve", use_container_width=True)
 
-if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", use_container_width=True):
+if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
-    elif not replicate_token:
-        st.error("❌ Lütfen Replicate Token girin!")
+    elif not xai_api_key:
+        st.error("❌ Lütfen xAI API Key girin!")
     else:
-        with st.spinner(f"{selected_code} modeli oturtuluyor... (20-45 saniye)"):
+        with st.spinner("Grok Imagine çalışıyor... (en iyi kalite, 15-35 saniye)"):
             try:
-                client = replicate.Client(api_token=replicate_token)
+                building_bytes = building_file.getvalue()
+                building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
                 Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS söve modelini 
@@ -51,40 +50,39 @@ if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", u
                 Çok profesyonel mimari render kalitesinde olsun.
                 """
 
-                output = client.run(
-                    "black-forest-labs/flux-1.1-pro",
-                    input={
-                        "image": building_file,
+                response = requests.post(
+                    "https://api.x.ai/v1/images/edits",
+                    headers={
+                        "Authorization": f"Bearer {xai_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "grok-imagine-image",
                         "prompt": prompt,
-                        "num_outputs": 1,
-                        "aspect_ratio": "1:1",
-                        "output_format": "jpg",
-                        "guidance_scale": 8.5,
-                        "num_inference_steps": 30
+                        "image": {
+                            "url": f"data:image/jpeg;base64,{building_b64}"
+                        }
                     }
                 )
 
-                # ✅ FileOutput hatasını kesin çözen kısım
-                if isinstance(output, list):
-                    result_url = output[0]
-                elif hasattr(output, 'url'):
-                    result_url = output.url
+                if response.status_code == 200:
+                    result = response.json()
+                    image_url = result["output"]["url"] if "output" in result else result.get("url")
+                    img_data = requests.get(image_url).content
+
+                    st.success("✅ Grok Imagine ile mükemmel şekilde oturtuldu!")
+                    st.image(img_data, caption="Sonuç", use_container_width=True)
+
+                    st.download_button(
+                        label="📥 Sonucu İndir (JPG)",
+                        data=img_data,
+                        file_name=f"sove_{selected_code}.jpg",
+                        mime="image/jpeg"
+                    )
                 else:
-                    result_url = str(output)
-
-                img_data = requests.get(result_url).content
-
-                st.success("✅ Sovetalya sövesi başarıyla oturtuldu!")
-                st.image(img_data, caption="Sonuç", use_container_width=True)
-
-                st.download_button(
-                    label="📥 Sonucu İndir (JPG)",
-                    data=img_data,
-                    file_name=f"sove_{selected_code}.jpg",
-                    mime="image/jpeg"
-                )
+                    st.error(f"API Hatası: {response.status_code}")
 
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 FileOutput hatası düzeltildi. Resimleri sove_images klasörüne yüklemeye devam et.")
+st.caption("🚀 Grok Imagine (xAI kendi altyapısı) kullanıyor. Token artık kodda değil, güvenli.")
