@@ -24,7 +24,6 @@ with col1:
 with col2:
     st.subheader("📚 Sovetalya Söve Kütüphanesi")
 
-    # Gerçek kodlar (TC001-TC024 + TC035-TC040)
     tc_codes = (
         [f"TC{i:03d}" for i in range(1, 25)] + 
         [f"TC{i:03d}" for i in range(35, 41)]
@@ -32,7 +31,6 @@ with col2:
 
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
-    # Gerçek ürün fotoğrafı (sove_images klasöründen)
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
     st.image(preview_url, caption=f"{selected_code} - Sovetalya Söve", use_container_width=True)
 
@@ -66,7 +64,14 @@ if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", u
                     }
                 )
 
-                result_url = output if isinstance(output, str) else output[0]
+                # ✅ FileOutput hatasını kesin çözen kısım
+                if isinstance(output, list):
+                    result_url = output[0]
+                elif hasattr(output, 'url'):
+                    result_url = output.url
+                else:
+                    result_url = str(output)
+
                 img_data = requests.get(result_url).content
 
                 st.success("✅ Sovetalya sövesi başarıyla oturtuldu!")
@@ -82,4 +87,4 @@ if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", u
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 Gerçek Sovetalya fotoğrafları yüklendi. Resimleri sove_images klasörüne TCxxx.png olarak yükle.")
+st.caption("🚀 FileOutput hatası düzeltildi. Resimleri sove_images klasörüne yüklemeye devam et.")
