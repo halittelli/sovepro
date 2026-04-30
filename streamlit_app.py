@@ -3,12 +3,12 @@ import requests
 import base64
 import os
 
-VERSION = "v2.4 - 30 Nisan 2026 - Önizleme Düzeltilmiş"
+VERSION = "v3.0 - Yeni Profesyonel Arayüz"
 
 st.set_page_config(page_title="Evimde Gör", page_icon="🏠", layout="wide")
 
-st.markdown("<h1 style='text-align: center; margin-bottom: 8px;'>Evimde Gör</h1>", unsafe_allow_html=True)
-st.caption(f"<p style='text-align: center; color: #555;'>Versiyon: {VERSION}</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-bottom: 5px; color: #1a1a1a;'>Evimde Gör</h1>", unsafe_allow_html=True)
+st.caption(f"<p style='text-align: center; color: #666;'>Versiyon: {VERSION}</p>", unsafe_allow_html=True)
 
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 
@@ -16,7 +16,7 @@ col1, col2 = st.columns([3, 2])
 
 with col1:
     st.subheader("📸 Bina Fotoğrafı Yükle")
-    building_file = st.file_uploader("JPG, PNG veya WEBP", type=["jpg", "jpeg", "png", "webp"])
+    building_file = st.file_uploader("Fotoğraf seçin (JPG, PNG, WEBP)", type=["jpg", "jpeg", "png", "webp"])
     if building_file:
         st.image(building_file, use_container_width=True)
 
@@ -28,21 +28,31 @@ with col2:
         [f"TC{i:03d}" for i in range(35, 41)]
     )
     
-    selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
-
-    # DÜZELTİLDİ: Resimler root klasörde olduğu için direkt bu yol
-    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
+    # Kartlı seçim
+    selected_code = None
+    cols = st.columns(4)
     
-    # Büyük ve net önizleme
-    st.image(preview_url, caption=f"{selected_code} - Gerçek Sovetalya Ürünü", use_container_width=True)
+    for i, code in enumerate(tc_codes):
+        with cols[i % 4]:
+            preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{code}.png"
+            if st.button(code, key=code, use_container_width=True):
+                selected_code = code
+            st.image(preview_url, use_column_width=True)
+    
+    if selected_code:
+        st.success(f"Seçilen Ürün: **{selected_code}**")
+        preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
+        st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün", use_container_width=True)
 
 if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
     if not building_file:
-        st.error("❌ Bina fotoğrafı yükleyin!")
+        st.error("❌ Lütfen bina fotoğrafı yükleyin!")
+    elif not selected_code:
+        st.error("❌ Lütfen bir ürün seçin!")
     elif not XAI_API_KEY:
         st.error("❌ API Key bulunamadı.")
     else:
-        with st.spinner("Grok Imagine çalışıyor..."):
+        with st.spinner(""):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
