@@ -7,9 +7,11 @@ st.title("🏠 Söve Oturucu Pro - Gerçek Sovetalya Modelleri")
 
 with st.sidebar:
     st.header("🔑 Replicate API Token")
-    replicate_token = st.text_input("Replicate Token", type="password", 
-                                    help="replicate.com/account/api-tokens adresinden al")
-    st.caption("Yeni hesapta $5 ücretsiz kredi var.")
+    replicate_token = st.text_input(
+        "Replicate Token", 
+        type="password",
+        help="replicate.com/account/api-tokens adresinden kopyala ve buraya yapıştır"
+    )
 
 col1, col2 = st.columns([3, 2])
 
@@ -22,43 +24,23 @@ with col1:
 with col2:
     st.subheader("📚 Sovetalya Söve Kütüphanesi")
 
-    # Gerçek Sovetalya modelleri (sadece kod + gerçekçi ürün önizlemesi)
-    sove_library = {
-        "STT-103": {
-            "preview": "https://picsum.photos/id/1015/320/220",   # Buraya gerçek ürün fotoğrafı linki koyacağız
-            "desc": "Modern Düz Beyaz Söve"
-        },
-        "STT-205": {
-            "preview": "https://picsum.photos/id/133/320/220",
-            "desc": "Lüks Gri Söve"
-        },
-        "ST-301": {
-            "preview": "https://picsum.photos/id/870/320/220",
-            "desc": "Taş Desenli Klasik Söve"
-        },
-        "STG-507": {
-            "preview": "https://picsum.photos/id/251/320/220",
-            "desc": "Minimal Gri Söve"
-        },
-        "TC-322": {
-            "preview": "https://picsum.photos/id/201/320/220",
-            "desc": "Lüks Siyah Çerçeve Söve"
-        }
-    }
+    tc_codes = (
+        [f"TC{i:03d}" for i in range(1, 25)] + 
+        [f"TC{i:03d}" for i in range(35, 41)]
+    )
 
-    selected_code = st.selectbox("Söve Kodunu Seçin", list(sove_library.keys()))
-    selected = sove_library[selected_code]
+    selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
-    # Küçük ürün önizlemesi
-    st.image(selected["preview"], caption=f"{selected_code} - {selected['desc']}", use_container_width=True)
+    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
+    st.image(preview_url, caption=f"{selected_code} - Sovetalya Söve", use_container_width=True)
 
 if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
     elif not replicate_token:
-        st.error("❌ Replicate Token girin!")
+        st.error("❌ Lütfen Replicate Token girin!")
     else:
-        with st.spinner("Gerçek Sovetalya sövesi oturtuluyor... (20-45 saniye)"):
+        with st.spinner(f"{selected_code} modeli oturtuluyor... (20-45 saniye)"):
             try:
                 client = replicate.Client(api_token=replicate_token)
 
@@ -82,7 +64,6 @@ if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", u
                     }
                 )
 
-                # Sonuç URL'sini al
                 result_url = output if isinstance(output, str) else output[0]
                 img_data = requests.get(result_url).content
 
@@ -99,4 +80,4 @@ if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", u
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 www.sovetalya.com.tr gerçek modelleri ile çalışıyor.")
+st.caption("🚀 Token artık kodda değil, her seferinde girmen gerekiyor. Güvenli.")
