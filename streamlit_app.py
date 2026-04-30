@@ -20,42 +20,37 @@ with col1:
         st.image(building_file, caption="Yüklenen Bina", use_container_width=True)
 
 with col2:
-    st.subheader("📚 Gerçek Sovetalya Söve Kütüphanesi")
-    
-    # Gerçek Sovetalya modelleri (örnekler - istersen daha fazla ekleriz)
+    st.subheader("📚 Sovetalya Söve Kütüphanesi")
+
+    # Gerçek Sovetalya modelleri (sadece kod + gerçekçi ürün önizlemesi)
     sove_library = {
-        "STT-103 Modern Beyaz Söve": {
-            "name": "STT-103",
-            "preview": "https://picsum.photos/id/1015/300/200",   # Gerçek fotoğraf linki eklenebilir
-            "desc": "Modern düz beyaz pencere sövesi"
+        "STT-103": {
+            "preview": "https://picsum.photos/id/1015/320/220",   # Buraya gerçek ürün fotoğrafı linki koyacağız
+            "desc": "Modern Düz Beyaz Söve"
         },
-        "STT-205 Lüks Gri Söve": {
-            "name": "STT-205",
-            "preview": "https://picsum.photos/id/133/300/200",
-            "desc": "Lüks gri dekoratif söve"
+        "STT-205": {
+            "preview": "https://picsum.photos/id/133/320/220",
+            "desc": "Lüks Gri Söve"
         },
-        "ST-301 Klasik Taş Görünümlü": {
-            "name": "ST-301",
-            "preview": "https://picsum.photos/id/870/300/200",
-            "desc": "Taş desenli klasik söve"
+        "ST-301": {
+            "preview": "https://picsum.photos/id/870/320/220",
+            "desc": "Taş Desenli Klasik Söve"
         },
-        "STG-507 Minimal Gri": {
-            "name": "STG-507",
-            "preview": "https://picsum.photos/id/251/300/200",
-            "desc": "Minimal gri modern söve"
+        "STG-507": {
+            "preview": "https://picsum.photos/id/251/320/220",
+            "desc": "Minimal Gri Söve"
         },
-        "TC-322 Lüks Siyah Çerçeve": {
-            "name": "TC-322",
-            "preview": "https://picsum.photos/id/201/300/200",
-            "desc": "Lüks siyah metal görünümlü söve"
+        "TC-322": {
+            "preview": "https://picsum.photos/id/201/320/220",
+            "desc": "Lüks Siyah Çerçeve Söve"
         }
     }
-    
-    selected_key = st.selectbox("Söve seçin", list(sove_library.keys()))
-    selected = sove_library[selected_key]
-    
-    # Küçük teknik çizim / ürün önizlemesi
-    st.image(selected["preview"], caption=f"{selected['name']} - {selected['desc']}", use_container_width=True)
+
+    selected_code = st.selectbox("Söve Kodunu Seçin", list(sove_library.keys()))
+    selected = sove_library[selected_code]
+
+    # Küçük ürün önizlemesi
+    st.image(selected["preview"], caption=f"{selected_code} - {selected['desc']}", use_container_width=True)
 
 if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", use_container_width=True):
     if not building_file:
@@ -63,13 +58,13 @@ if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", u
     elif not replicate_token:
         st.error("❌ Replicate Token girin!")
     else:
-        with st.spinner("Gerçekçi söve oturtuluyor... (20-40 saniye)"):
+        with st.spinner("Gerçek Sovetalya sövesi oturtuluyor... (20-45 saniye)"):
             try:
                 client = replicate.Client(api_token=replicate_token)
 
                 prompt = f"""
-                Bu binadaki TÜM pencerelere {selected['name']} modelini (gerçek Sovetalya XPS söve) mükemmel perspektif, 
-                doğru orantı, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. 
+                Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS söve modelini 
+                mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. 
                 Söve tam olarak orijinal ürün gibi dursun. Binada başka hiçbir şeyi değiştirme. 
                 Çok profesyonel mimari render kalitesinde olsun.
                 """
@@ -87,24 +82,21 @@ if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", u
                     }
                 )
 
-                if isinstance(output, list):
-                    result_url = output[0]
-                else:
-                    result_url = str(output)
-
+                # Sonuç URL'sini al
+                result_url = output if isinstance(output, str) else output[0]
                 img_data = requests.get(result_url).content
 
-                st.success("✅ Gerçek Sovetalya sövesi oturtuldu!")
+                st.success("✅ Sovetalya sövesi başarıyla oturtuldu!")
                 st.image(img_data, caption="Sonuç", use_container_width=True)
 
                 st.download_button(
                     label="📥 Sonucu İndir (JPG)",
                     data=img_data,
-                    file_name=f"sove_{selected['name']}.jpg",
+                    file_name=f"sove_{selected_code}.jpg",
                     mime="image/jpeg"
                 )
 
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 www.sovetalya.com.tr gerçek modelleri ile çalışıyor. Daha fazla model eklemek istersen söyle.")
+st.caption("🚀 www.sovetalya.com.tr gerçek modelleri ile çalışıyor.")
