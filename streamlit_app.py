@@ -3,7 +3,7 @@ import requests
 import base64
 import os
 
-VERSION = "v2.3 - 30 Nisan 2026 - Hatasız Önizleme"
+VERSION = "v2.4 - 30 Nisan 2026 - Önizleme Düzeltildi"
 
 st.set_page_config(page_title="Evimde Gör", page_icon="🏠", layout="wide")
 
@@ -30,14 +30,14 @@ with col2:
     
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
-    # DÜZELTİLDİ: Resimler root klasörde olduğu için direkt main/{code}.png
+    # DÜZELTİLDİ: Resimler root klasörde (TC001.png şeklinde)
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
     
-    # Küçük önizleme (selectbox yanında)
-    st.image(preview_url, caption=f"{selected_code} - Küçük Önizleme", width=180)
-    
-    # Büyük önizleme (altında)
-    st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün Fotoğrafı", use_container_width=True)
+    # Hata yakalama ile önizleme
+    try:
+        st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün Fotoğrafı", use_container_width=True)
+    except:
+        st.error(f"❌ {selected_code}.png görseli bulunamadı. Lütfen GitHub'da root klasöre TC001.png şeklinde yükleyin.")
 
 if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
     if not building_file:
