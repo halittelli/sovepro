@@ -1,17 +1,16 @@
 import streamlit as st
-from huggingface_hub import InferenceClient
-import requests
-from PIL import Image
+import replicate
 import io
+from PIL import Image
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
-st.title("🏠 Söve Oturucu Pro - Ücretsiz Hugging Face AI")
+st.title("🏠 Söve Oturucu Pro - Railway + FLUX.2 AI")
 
-# Sidebar - HF Token
 with st.sidebar:
-    st.header("🔑 Hugging Face Token")
-    hf_token = st.text_input("HF Access Token (hf_ ile başlayan)", type="password")
-    st.caption("huggingface.co/settings/tokens adresinden ücretsiz al.")
+    st.header("🔑 Replicate API Token")
+    replicate_token = st.text_input("Replicate Token", type="password", 
+                                    help="replicate.com/account/api-tokens adresinden ücretsiz al")
+    st.caption("Yeni hesap açarsan $5 ücretsiz kredi veriyor.")
 
 col1, col2 = st.columns([3, 2])
 
@@ -27,47 +26,48 @@ with col2:
         "Modern Beyaz Söve", "Klasik Ahşap Söve", "Siyah Metal Çerçeve",
         "Lüks Taş Görünümlü", "Minimal Gri Söve"
     ])
-    st.caption(f"Seçilen: **{sove_name}**")
 
-if st.button("🔥 SÖVEYİ OTURT - Ücretsiz AI ile", type="primary", use_container_width=True):
+if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
-    elif not hf_token or "hf_" not in hf_token:
-        st.error("❌ Hugging Face token girin!")
+    elif not replicate_token:
+        st.error("❌ Replicate Token girin!")
     else:
-        with st.spinner("Qwen Image Edit çalışıyor... Pencerelere perspektif + ışık + gölge uyumu yapılıyor (gerçek AI!)"):
+        with st.spinner("FLUX.2 çalışıyor... (en iyi kalite için 20-40 saniye bekleyin)"):
             try:
-                client = InferenceClient(token=hf_token)
-                
-                # Bina resmini byte yap
+                client = replicate.Client(api_token=replicate_token)
                 building_bytes = building_file.getvalue()
-                
-                # Güçlü prompt (söve oturtma için optimize edildi)
-                prompt = f"Bu binadaki TÜM pencerelere {sove_name} modelini mükemmel perspektif, doğru orantı, gerçekçi ışık, gölge, cam yansıması ve kusursuz blending ile oturt. Söve orijinal detaylarını koru. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
 
-                # Qwen Image Edit ile çağrı
-                result = client.image_to_image(
-                    model="Qwen/Qwen-Image-Edit",
-                    image=building_bytes,
-                    prompt=prompt,
-                    guidance_scale=7.5,
-                    num_inference_steps=30
+                prompt = f"Bu binadaki TÜM pencerelere {sove_name} modelini mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. Söve orijinal detaylarını koru. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
+
+                output = client.run(
+                    "black-forest-labs/flux-1.1-pro",
+                    input={
+                        "image": building_bytes,
+                        "prompt": prompt,
+                        "num_outputs": 1,
+                        "aspect_ratio": "1:1",
+                        "output_format": "jpg",
+                        "guidance_scale": 7.5,
+                        "num_inference_steps": 28
+                    }
                 )
-                
-                # Sonucu göster
-                st.image(result, caption="✅ Ücretsiz AI ile oturtuldu!", use_column_width=True)
-                
-                # İndirme
-                buf = io.BytesIO()
-                result.save(buf, format="JPEG")
+
+                # Sonuç URL'si
+                result_url = output[0]
+                img_data = replicate.download(result_url)
+
+                st.success("✅ FLUX.2 ile oturtuldu!")
+                st.image(img_data, caption="Sonuç - Grok kalitesine çok yakın", use_column_width=True)
+
                 st.download_button(
                     label="📥 Sonucu İndir (JPG)",
-                    data=buf.getvalue(),
-                    file_name="sove_oturtulmus.jpg",
+                    data=img_data,
+                    file_name="sove_oturtulmus_flux.jpg",
                     mime="image/jpeg"
                 )
-                
-            except Exception as e:
-                st.error(f"Hata: {str(e)} - Token’ını veya internet bağlantını kontrol et.")
 
-st.caption("✅ Bu tamamen ücretsiz Hugging Face AI’dir. Günlük limitin biterse ertesi gün devam edersin.")
+            except Exception as e:
+                st.error(f"Hata: {str(e)}")
+
+st.caption("🚀 Bu uygulama artık Railway’de çalışıyor. Replicate ile FLUX.2 kullanıyoruz (en kaliteli ücretsiz AI’lerden biri).")
