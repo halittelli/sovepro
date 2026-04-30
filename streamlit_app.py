@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import base64
+import time
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 st.title("🏠 Söve Oturucu Pro - Grok Imagine (fal.ai üzerinden)")
@@ -10,7 +11,8 @@ with st.sidebar:
     fal_api_key = st.text_input(
         "fal.ai API Key", 
         type="password",
-        help="fal.ai → API Keys → yeni key oluştur"
+        value="c9436be0-8706-49a7-b63c-4506659a5a73:55874382a80499abca9d7d84cbcc97e0",
+        help="Key otomatik yüklendi"
     )
 
 col1, col2 = st.columns([3, 2])
@@ -35,10 +37,8 @@ with col2:
 if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
-    elif not fal_api_key:
-        st.error("❌ fal.ai API Key girin!")
     else:
-        with st.spinner("Grok Imagine çalışıyor... (en iyi kalite, 15-40 saniye)"):
+        with st.spinner("Grok Imagine çalışıyor... (15-40 saniye)"):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
@@ -50,20 +50,28 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                 Çok profesyonel mimari render kalitesinde olsun.
                 """
 
-                response = requests.post(
-                    "https://queue.fal.ai/xai/grok-imagine-image/edit",
-                    json={
-                        "input": {
-                            "image_url": f"data:image/jpeg;base64,{building_b64}",
-                            "prompt": prompt
-                        }
-                    },
-                    headers={
-                        "Authorization": f"Key {fal_api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    timeout=120
-                )
+                # Daha stabil endpoint + retry
+                for attempt in range(3):
+                    try:
+                        response = requests.post(
+                            "https://fal.run/xai/grok-imagine-image/edit",
+                            json={
+                                "input": {
+                                    "image_url": f"data:image/jpeg;base64,{building_b64}",
+                                    "prompt": prompt
+                                }
+                            },
+                            headers={
+                                "Authorization": f"Key {fal_api_key}",
+                                "Content-Type": "application/json"
+                            },
+                            timeout=90
+                        )
+                        if response.status_code == 200:
+                            break
+                    except:
+                        time.sleep(2)
+                        continue
 
                 if response.status_code == 200:
                     result = response.json()
@@ -80,9 +88,9 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                         mime="image/jpeg"
                     )
                 else:
-                    st.error(f"API Hatası: {response.status_code} - {response.text[:300]}")
+                    st.error(f"API Hatası: {response.status_code} - {response.text[:400]}")
 
             except Exception as e:
-                st.error(f"Hata: {str(e)}")
+                st.error(f"Bağlantı hatası: {str(e)}")
 
-st.caption("🚀 Grok Imagine (fal.ai üzerinden) - En stabil yol.")
+st.caption("🚀 Grok Imagine (fal.run üzerinden) - Daha stabil endpoint kullanıyoruz.")
