@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import base64
 
-VERSION = "v1.6 - 30 Nisan 2026 - Ürün Önizleme İyileştirildi"
+VERSION = "v1.7 - 30 Nisan 2026 - Önizleme + Çentik Düzeltmesi"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 st.title("🏠 Söve Oturucu Pro - Grok Imagine (xAI Resmi)")
@@ -26,16 +26,14 @@ with col1:
 
 with col2:
     st.subheader("📚 Sovetalya Söve Kütüphanesi")
-    
     tc_codes = (
         [f"TC{i:03d}" for i in range(1, 25)] + 
         [f"TC{i:03d}" for i in range(35, 41)]
     )
-    
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
-    # Gerçek ürün fotoğrafı (sove_images klasöründen)
-    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
+    # Önizleme görseli (sove_images klasöründeki gerçek fotoğraflar)
+    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/sove_{selected_code}.jpg"
     st.image(preview_url, caption=f"{selected_code} - Gerçek Sovetalya Ürünü", use_container_width=True)
 
 if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_container_width=True):
@@ -51,9 +49,10 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
 
                 prompt = f"""
                 Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS söve modelini 
-                mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. 
-                Söve tam olarak orijinal ürün gibi dursun. Binada başka hiçbir şeyi değiştirme. 
-                Çok profesyonel mimari render kalitesinde olsun.
+                mükemmel perspektif, tam orantılı, gerçekçi ışık ve gölge, cam yansıması ile oturt. 
+                Söve kenarları tamamen temiz, keskin ve pürüzsüz olsun. Hiç çentik, kırık veya jagged edge olmasın. 
+                Seamless blending mükemmel olsun. Söve tam olarak orijinal ürün gibi dursun. 
+                Binada başka hiçbir şeyi değiştirme. Çok profesyonel mimari render kalitesinde olsun.
                 """
 
                 response = requests.post(
@@ -78,7 +77,7 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
 
                     if image_url:
                         img_data = requests.get(image_url).content
-                        st.success("✅ Grok Imagine ile mükemmel şekilde oturtuldu!")
+                        st.success("✅ Grok Imagine ile oturtuldu!")
                         st.image(img_data, caption="Sonuç", use_container_width=True)
 
                         st.download_button(
@@ -88,7 +87,7 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                             mime="image/jpeg"
                         )
                     else:
-                        st.error("Sonuç URL'si alınamadı. Tekrar deneyin.")
+                        st.error("Sonuç URL'si alınamadı.")
                 else:
                     st.error(f"API Hatası: {response.status_code}")
 
