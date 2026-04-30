@@ -3,14 +3,25 @@ import requests
 import base64
 import os
 
-VERSION = "v2.0 - 30 Nisan 2026 - API Key Güvenli"
+VERSION = "v2.1 - 30 Nisan 2026"
 
-st.set_page_config(page_title="Söve Oturucu", page_icon="🏠", layout="wide")
+st.set_page_config(page_title="Evimde Gör", page_icon="🏠", layout="wide")
 
-st.markdown("<h1 style='text-align: center;'>Söve Oturucu</h1>", unsafe_allow_html=True)
-st.caption(f"Versiyon: {VERSION}")
+# Arka plan logosu (transparan ve büyük)
+st.markdown("""
+<style>
+    .stApp {
+        background: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), 
+                    url('https://raw.githubusercontent.com/halitelli/sovepro/main/logo.png') center/cover no-repeat;
+        background-attachment: fixed;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# API Key Railway Variables'dan okunuyor (güvenli)
+st.markdown("<h1 style='text-align: center; margin-bottom: 8px; color: #1a1a1a;'>Evimde Gör</h1>", unsafe_allow_html=True)
+st.caption(f"<p style='text-align: center; color: #555;'>Versiyon: {VERSION}</p>", unsafe_allow_html=True)
+
+# API Key (Railway Variables'dan geliyor)
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 
 col1, col2 = st.columns([3, 2])
@@ -22,18 +33,18 @@ with col1:
         st.image(building_file, use_container_width=True)
 
 with col2:
-    st.subheader("📚 Sovetalya Söve Kütüphanesi")
+    st.subheader("📚 ÜRÜNLER")
     tc_codes = (
         [f"TC{i:03d}" for i in range(1, 25)] + 
         [f"TC{i:03d}" for i in range(35, 41)]
     )
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
-    # Gerçek ürün önizlemesi
-    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/sove_{selected_code}.jpg"
+    # Gerçek ürün önizlemesi (dosya isimleriniz TC001.png şeklinde)
+    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
     st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün", use_container_width=True)
 
-if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_container_width=True):
+if st.button("🔥 SÖVEYİ OTURT", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
     elif not XAI_API_KEY:
@@ -66,14 +77,14 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                     image_url = None
                     if "data" in result and len(result["data"]) > 0:
                         image_url = result["data"][0].get("url")
-                    elif "output" in result:
+                    elif "output" in result and isinstance(result["output"], dict):
                         image_url = result["output"].get("url")
                     elif "url" in result:
                         image_url = result.get("url")
 
                     if image_url:
                         img_data = requests.get(image_url).content
-                        st.success("✅ Grok Imagine ile oturtuldu!")
+                        st.success("✅ İşlem tamamlandı!")
                         st.image(img_data, caption="Sonuç", use_container_width=True)
 
                         st.download_button(
