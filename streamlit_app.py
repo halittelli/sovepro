@@ -18,7 +18,7 @@ with col1:
     st.subheader("📸 Bina Fotoğrafı Yükle")
     building_file = st.file_uploader("JPG / PNG / WEBP", type=["jpg", "jpeg", "png", "webp"])
     if building_file:
-        st.image(building_file, caption="Yüklenen Bina", use_column_width=True)
+        st.image(building_file, caption="Yüklenen Bina", use_container_width=True)
 
 with col2:
     st.subheader("📚 Söve Seçimi")
@@ -38,7 +38,7 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
                 client = replicate.Client(api_token=replicate_token)
                 building_bytes = building_file.getvalue()
 
-                # Resmi Replicate'e yükle (doğru yöntem)
+                # Resmi Replicate'e yükle
                 image_url = replicate.files.upload(building_bytes)
 
                 prompt = f"Bu binadaki TÜM pencerelere {sove_name} modelini mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. Söve orijinal detaylarını koru. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
@@ -60,7 +60,7 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
                 img_data = replicate.download(result_url)
 
                 st.success("✅ FLUX.2 ile oturtuldu!")
-                st.image(img_data, caption="Sonuç - Grok kalitesine çok yakın", use_column_width=True)
+                st.image(img_data, caption="Sonuç - Grok kalitesine çok yakın", use_container_width=True)
 
                 st.download_button(
                     label="📥 Sonucu İndir (JPG)",
