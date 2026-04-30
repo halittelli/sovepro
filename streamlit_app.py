@@ -10,7 +10,7 @@ with st.sidebar:
     xai_api_key = st.text_input(
         "xAI API Key", 
         type="password",
-        help="console.x.ai → API Keys → kopyala ve buraya yapıştır"
+        help="console.x.ai → API Keys → buradan kopyala ve yapıştır"
     )
 
 col1, col2 = st.columns([3, 2])
@@ -35,7 +35,7 @@ with col2:
 if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
-    elif not xai_api_key or len(xai_api_key) < 10:
+    elif not xai_api_key:
         st.error("❌ Lütfen xAI API Key girin!")
     else:
         with st.spinner("Grok Imagine (xAI resmi) çalışıyor... (15-35 saniye)"):
@@ -85,4 +85,4 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 Güvenli mod: API Key artık kodda değil, sidebar'dan giriliyor.")
+st.caption("🚀 xAI resmi Grok Imagine altyapısı kullanılıyor.")
