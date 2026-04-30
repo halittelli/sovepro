@@ -1,8 +1,6 @@
 import streamlit as st
 import replicate
 import requests
-import io
-from PIL import Image
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 st.title("🏠 Söve Oturucu Pro - Railway + FLUX.2 AI")
@@ -53,8 +51,14 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
                     }
                 )
 
-                # Düzeltilmiş download yöntemi
-                result_url = output if isinstance(output, str) else output[0]
+                # ✅ FileOutput hatasını çözen kısım
+                if isinstance(output, list):
+                    result_url = output[0]
+                elif hasattr(output, 'url'):
+                    result_url = output.url
+                else:
+                    result_url = str(output)
+
                 img_data = requests.get(result_url).content
 
                 st.success("✅ FLUX.2 ile oturtuldu!")
@@ -70,4 +74,4 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 Artık tüm hatalar düzeltildi! Token girip dene.")
+st.caption("🚀 Artık tüm hatalar çözüldü! Token girip dene.")
