@@ -7,21 +7,9 @@ VERSION = "v2.1 - 30 Nisan 2026"
 
 st.set_page_config(page_title="Evimde Gör", page_icon="🏠", layout="wide")
 
-# Arka plan logosu (transparan ve büyük)
-st.markdown("""
-<style>
-    .stApp {
-        background: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), 
-                    url('https://raw.githubusercontent.com/halitelli/sovepro/main/logo.png') center/cover no-repeat;
-        background-attachment: fixed;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("<h1 style='text-align: center; margin-bottom: 8px; color: #1a1a1a;'>Evimde Gör</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-bottom: 8px;'>Evimde Gör</h1>", unsafe_allow_html=True)
 st.caption(f"<p style='text-align: center; color: #555;'>Versiyon: {VERSION}</p>", unsafe_allow_html=True)
 
-# API Key (Railway Variables'dan geliyor)
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 
 col1, col2 = st.columns([3, 2])
@@ -40,17 +28,17 @@ with col2:
     )
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
-    # Gerçek ürün önizlemesi (dosya isimleriniz TC001.png şeklinde)
-    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
-    st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün", use_container_width=True)
+    # DÜZELTİLDİ: Dosyalar root'ta olduğu için sove_images klasörü kaldırıldı
+    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
+    st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün Fotoğrafı", use_container_width=True)
 
-if st.button("🔥 SÖVEYİ OTURT", type="primary", use_container_width=True):
+if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
     elif not XAI_API_KEY:
         st.error("❌ API Key bulunamadı. Railway Variables'a XAI_API_KEY ekleyin.")
     else:
-        with st.spinner("Grok Imagine çalışıyor... (15-40 saniye)"):
+        with st.spinner(""):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
