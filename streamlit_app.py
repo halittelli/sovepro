@@ -39,10 +39,11 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
 
                 prompt = f"Bu binadaki TÜM pencerelere {sove_name} modelini mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. Söve orijinal detaylarını koru. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
 
+                # Modeli çalıştır
                 output = client.run(
                     "black-forest-labs/flux-1.1-pro",
                     input={
-                        "image": building_file,          # ← EN ÖNEMLİ DEĞİŞİKLİK BURADA
+                        "image": building_file,           # Direkt dosya objesi
                         "prompt": prompt,
                         "num_outputs": 1,
                         "aspect_ratio": "1:1",
@@ -52,8 +53,8 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
                     }
                 )
 
-                result_url = output[0]
-                img_data = replicate.download(result_url)
+                # FileOutput objesini doğru şekilde işle
+                img_data = replicate.download(output)
 
                 st.success("✅ FLUX.2 ile oturtuldu!")
                 st.image(img_data, caption="Sonuç - Grok kalitesine çok yakın", use_container_width=True)
@@ -68,4 +69,4 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 Artık upload hatası yok! Token girip dene.")
+st.caption("🚀 Artık tüm upload ve FileOutput hataları düzeltildi! Token girip dene.")
