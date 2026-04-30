@@ -24,6 +24,7 @@ with col1:
 with col2:
     st.subheader("📚 Sovetalya Söve Kütüphanesi")
 
+    # Gerçek kodlar (TC001-TC024 + TC035-TC040)
     tc_codes = (
         [f"TC{i:03d}" for i in range(1, 25)] + 
         [f"TC{i:03d}" for i in range(35, 41)]
@@ -31,6 +32,7 @@ with col2:
 
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
 
+    # Gerçek ürün fotoğrafı (sove_images klasöründen)
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
     st.image(preview_url, caption=f"{selected_code} - Sovetalya Söve", use_container_width=True)
 
@@ -80,4 +82,4 @@ if st.button("🔥 SÖVEYİ OTURT - Gerçek Sovetalya Modeli", type="primary", u
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 Token artık kodda değil, her seferinde girmen gerekiyor. Güvenli.")
+st.caption("🚀 Gerçek Sovetalya fotoğrafları yüklendi. Resimleri sove_images klasörüne TCxxx.png olarak yükle.")
