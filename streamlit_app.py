@@ -2,14 +2,11 @@ import streamlit as st
 import requests
 import base64
 
-# ====================== VERSİYON BİLGİSİ ======================
-VERSION = "v1.3 - 30 Nisan 2026"
-# ===============================================================
+VERSION = "v1.4 - Debug Mod - 30 Nisan 2026"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 st.title("🏠 Söve Oturucu Pro - Grok Imagine (xAI Resmi)")
-
-st.caption(f"**Versiyon:** {VERSION} | Railway cache kontrolü için")
+st.caption(f"**Versiyon:** {VERSION} | API Response Debug Aktif")
 
 with st.sidebar:
     st.header("🔑 xAI API Key")
@@ -44,7 +41,7 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
     elif not xai_api_key:
         st.error("❌ Lütfen xAI API Key girin!")
     else:
-        with st.spinner("Grok Imagine (xAI resmi) çalışıyor... (15-40 saniye)"):
+        with st.spinner("Grok Imagine çalışıyor..."):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
@@ -71,16 +68,22 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                     }
                 )
 
+                # === DEBUG: API'den ne geldiğini görelim ===
+                st.subheader("🔍 API Debug Bilgisi")
+                st.json(response.json())
+
                 if response.status_code == 200:
                     result = response.json()
-                    # xAI API'sinin dönüş yapısına göre güvenli parse
+                    # Tüm olası anahtarları kontrol et
                     image_url = None
                     if "output" in result and isinstance(result["output"], dict):
                         image_url = result["output"].get("url")
                     elif "url" in result:
                         image_url = result.get("url")
-                    else:
-                        image_url = result.get("image_url")
+                    elif "data" in result and isinstance(result["data"], list):
+                        image_url = result["data"][0].get("url")
+                    elif "images" in result and isinstance(result["images"], list):
+                        image_url = result["images"][0].get("url")
 
                     if image_url:
                         img_data = requests.get(image_url).content
@@ -94,11 +97,11 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
                             mime="image/jpeg"
                         )
                     else:
-                        st.error("Sonuç URL'si alınamadı. Lütfen tekrar deneyin.")
+                        st.error("❌ Sonuç URL'si API'den alınamadı. Yukarıdaki JSON'da 'url' anahtarı var mı kontrol et.")
                 else:
-                    st.error(f"API Hatası: {response.status_code} - {response.text[:400]}")
+                    st.error(f"API Hatası: {response.status_code} - {response.text[:500]}")
 
             except Exception as e:
-                st.error(f"Hata: {str(e)}")
+                st.error(f"Genel Hata: {str(e)}")
 
-st.caption(f"**Versiyon:** {VERSION} | Grok Imagine xAI resmi altyapısı")
+st.caption(f"**Versiyon:** {VERSION}")
