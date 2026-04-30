@@ -2,15 +2,21 @@ import streamlit as st
 import requests
 import base64
 
+# ====================== VERSİYON BİLGİSİ ======================
+VERSION = "v1.3 - 30 Nisan 2026"
+# ===============================================================
+
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
-st.title("🏠 Söve Oturucu Pro - Grok Imagine (xAI Resmi Altyapısı)")
+st.title("🏠 Söve Oturucu Pro - Grok Imagine (xAI Resmi)")
+
+st.caption(f"**Versiyon:** {VERSION} | Railway cache kontrolü için")
 
 with st.sidebar:
     st.header("🔑 xAI API Key")
     xai_api_key = st.text_input(
         "xAI API Key", 
         type="password",
-        help="console.x.ai → API Keys → buradan kopyala ve yapıştır"
+        help="console.x.ai → API Keys → kopyala ve buraya yapıştır"
     )
 
 col1, col2 = st.columns([3, 2])
@@ -38,7 +44,7 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
     elif not xai_api_key:
         st.error("❌ Lütfen xAI API Key girin!")
     else:
-        with st.spinner("Grok Imagine (xAI resmi) çalışıyor... (15-35 saniye)"):
+        with st.spinner("Grok Imagine (xAI resmi) çalışıyor... (15-40 saniye)"):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
@@ -67,22 +73,32 @@ if st.button("🔥 SÖVEYİ OTURT - Grok Imagine ile", type="primary", use_conta
 
                 if response.status_code == 200:
                     result = response.json()
-                    image_url = result.get("output", {}).get("url") or result.get("url")
-                    img_data = requests.get(image_url).content
+                    # xAI API'sinin dönüş yapısına göre güvenli parse
+                    image_url = None
+                    if "output" in result and isinstance(result["output"], dict):
+                        image_url = result["output"].get("url")
+                    elif "url" in result:
+                        image_url = result.get("url")
+                    else:
+                        image_url = result.get("image_url")
 
-                    st.success("✅ Grok Imagine ile mükemmel şekilde oturtuldu!")
-                    st.image(img_data, caption="Sonuç", use_container_width=True)
+                    if image_url:
+                        img_data = requests.get(image_url).content
+                        st.success("✅ Grok Imagine ile mükemmel şekilde oturtuldu!")
+                        st.image(img_data, caption="Sonuç", use_container_width=True)
 
-                    st.download_button(
-                        label="📥 Sonucu İndir (JPG)",
-                        data=img_data,
-                        file_name=f"sove_{selected_code}.jpg",
-                        mime="image/jpeg"
-                    )
+                        st.download_button(
+                            label="📥 Sonucu İndir (JPG)",
+                            data=img_data,
+                            file_name=f"sove_{selected_code}.jpg",
+                            mime="image/jpeg"
+                        )
+                    else:
+                        st.error("Sonuç URL'si alınamadı. Lütfen tekrar deneyin.")
                 else:
                     st.error(f"API Hatası: {response.status_code} - {response.text[:400]}")
 
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 xAI resmi Grok Imagine altyapısı kullanılıyor.")
+st.caption(f"**Versiyon:** {VERSION} | Grok Imagine xAI resmi altyapısı")
