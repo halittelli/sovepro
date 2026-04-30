@@ -36,17 +36,13 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
         with st.spinner("FLUX.2 çalışıyor... (20-45 saniye sürebilir)"):
             try:
                 client = replicate.Client(api_token=replicate_token)
-                building_bytes = building_file.getvalue()
-
-                # ✅ EN STABİL UPLOAD YÖNTEMİ (Client üzerinden)
-                image_url = client.files.upload(building_bytes)
 
                 prompt = f"Bu binadaki TÜM pencerelere {sove_name} modelini mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. Söve orijinal detaylarını koru. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
 
                 output = client.run(
                     "black-forest-labs/flux-1.1-pro",
                     input={
-                        "image": image_url,
+                        "image": building_file,          # ← EN ÖNEMLİ DEĞİŞİKLİK BURADA
                         "prompt": prompt,
                         "num_outputs": 1,
                         "aspect_ratio": "1:1",
@@ -72,4 +68,4 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 Railway + FLUX.2 ile çalışıyor. Token girip dene!")
+st.caption("🚀 Artık upload hatası yok! Token girip dene.")
