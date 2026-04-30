@@ -9,8 +9,8 @@ st.title("🏠 Söve Oturucu Pro - Railway + FLUX.2 AI")
 with st.sidebar:
     st.header("🔑 Replicate API Token")
     replicate_token = st.text_input("Replicate Token", type="password", 
-                                    help="replicate.com/account/api-tokens adresinden ücretsiz al")
-    st.caption("Yeni hesap açarsan $5 ücretsiz kredi veriyor.")
+                                    help="replicate.com/account/api-tokens adresinden al")
+    st.caption("Yeni hesapta $5 ücretsiz kredi var.")
 
 col1, col2 = st.columns([3, 2])
 
@@ -33,17 +33,20 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
     elif not replicate_token:
         st.error("❌ Replicate Token girin!")
     else:
-        with st.spinner("FLUX.2 çalışıyor... (en iyi kalite için 20-40 saniye bekleyin)"):
+        with st.spinner("FLUX.2 çalışıyor... (20-45 saniye sürebilir)"):
             try:
                 client = replicate.Client(api_token=replicate_token)
                 building_bytes = building_file.getvalue()
 
+                # ÖNEMLİ: Bytes'i önce Replicate'e upload et
+                image_url = client.upload(building_bytes, filename="building.jpg")
+
                 prompt = f"Bu binadaki TÜM pencerelere {sove_name} modelini mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. Söve orijinal detaylarını koru. Binada başka hiçbir şeyi değiştirme. Çok profesyonel ve gerçekçi olsun."
 
                 output = client.run(
-                    "black-forest-labs/flux-1.1-pro",
+                    "black-forest-labs/flux-dev",   # Daha stabil image-to-image modeli
                     input={
-                        "image": building_bytes,
+                        "image": image_url,         # URL olarak gönderiyoruz
                         "prompt": prompt,
                         "num_outputs": 1,
                         "aspect_ratio": "1:1",
@@ -53,7 +56,6 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
                     }
                 )
 
-                # Sonuç URL'si
                 result_url = output[0]
                 img_data = replicate.download(result_url)
 
@@ -70,4 +72,4 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX.2 ile", type="primary", use_container_w
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
 
-st.caption("🚀 Bu uygulama artık Railway’de çalışıyor. Replicate ile FLUX.2 kullanıyoruz (en kaliteli ücretsiz AI’lerden biri).")
+st.caption("🚀 Railway + FLUX.2 ile çalışıyor. Token girip dene!")
