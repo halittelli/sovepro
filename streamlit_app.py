@@ -3,7 +3,7 @@ import requests
 import base64
 import os
 
-VERSION = "v3.1 - HF Ücretsiz + Hata Düzeltilmiş"
+VERSION = "v3.2 - HF Ücretsiz Düzeltilmiş"
 
 st.set_page_config(page_title="Evimde Gör", page_icon="🏠", layout="wide")
 
@@ -35,23 +35,30 @@ if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
     elif not HF_TOKEN:
-        st.error("❌ HF_TOKEN bulunamadı. Railway Variables'a ekleyin.")
+        st.error("❌ HF_TOKEN bulunamadı.")
     else:
-        with st.spinner("Ücretsiz model çalışıyor... (30-60 saniye)"):
+        with st.spinner("Ücretsiz model çalışıyor... (40-90 saniye)"):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS söve modelini 
-                mükemmel perspektif, gerçekçi ışık, gölge ve seamless blending ile oturt. 
-                Söve tam olarak orijinal ürün gibi dursun. Binada başka hiçbir şeyi değiştirme.
+                Profesyonel mimari render: Bu binadaki tüm pencerelere {selected_code} kodlu Sovetalya XPS söve profili yerleştir. 
+                Gerçekçi perspektif, ışık, gölge ve kusursuz uyum ile. Söve orijinal ürün gibi dursun.
                 """
 
-                API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev"
+                # Daha stabil ücretsiz model
+                API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
                 
                 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-                payload = {"inputs": prompt}
+                payload = {
+                    "inputs": prompt,
+                    "parameters": {
+                        "negative_prompt": "kötü kalite, bulanık, deformasyon, yazı, logo",
+                        "num_inference_steps": 30,
+                        "guidance_scale": 7.5
+                    }
+                }
 
                 response = requests.post(API_URL, headers=headers, json=payload)
 
@@ -66,7 +73,7 @@ if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
                         mime="image/jpeg"
                     )
                 else:
-                    st.error(f"API Hatası: {response.status_code} - {response.text[:300]}")
+                    st.error(f"API Hatası: {response.status_code}\n{response.text[:300]}")
 
             except Exception as e:
                 st.error(f"Genel Hata: {str(e)}")
