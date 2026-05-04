@@ -3,104 +3,80 @@ import requests
 import base64
 import os
 
-VERSION = "v3.0 - Yeni Profesyonel Arayüz"
+VERSION = "v3.0 - Ücretsiz HF Versiyon"
 
 st.set_page_config(page_title="Evimde Gör", page_icon="🏠", layout="wide")
 
-st.markdown("<h1 style='text-align: center; margin-bottom: 5px; color: #1a1a1a;'>Evimde Gör</h1>", unsafe_allow_html=True)
-st.caption(f"<p style='text-align: center; color: #666;'>Versiyon: {VERSION}</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-bottom: 8px;'>Evimde Gör</h1>", unsafe_allow_html=True)
+st.caption(f"<p style='text-align: center; color: #555;'>Versiyon: {VERSION} - Ücretsiz Mod</p>", unsafe_allow_html=True)
 
-XAI_API_KEY = os.getenv("XAI_API_KEY")
+# Hugging Face Token (Railway Variables'a HF_TOKEN olarak ekle)
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 col1, col2 = st.columns([3, 2])
 
 with col1:
     st.subheader("📸 Bina Fotoğrafı Yükle")
-    building_file = st.file_uploader("Fotoğraf seçin (JPG, PNG, WEBP)", type=["jpg", "jpeg", "png", "webp"])
+    building_file = st.file_uploader("JPG, PNG veya WEBP", type=["jpg", "jpeg", "png", "webp"])
     if building_file:
         st.image(building_file, use_container_width=True)
 
 with col2:
     st.subheader("📚 ÜRÜNLER")
-    
     tc_codes = (
         [f"TC{i:03d}" for i in range(1, 25)] + 
         [f"TC{i:03d}" for i in range(35, 41)]
     )
-    
-    # Kartlı seçim
-    selected_code = None
-    cols = st.columns(4)
-    
-    for i, code in enumerate(tc_codes):
-        with cols[i % 4]:
-            preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{code}.png"
-            if st.button(code, key=code, use_container_width=True):
-                selected_code = code
-            st.image(preview_url, use_column_width=True)
-    
-    if selected_code:
-        st.success(f"Seçilen Ürün: **{selected_code}**")
-        preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
-        st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün", use_container_width=True)
+    selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
+
+    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
+    st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün", use_container_width=True)
 
 if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
     if not building_file:
-        st.error("❌ Lütfen bina fotoğrafı yükleyin!")
-    elif not selected_code:
-        st.error("❌ Lütfen bir ürün seçin!")
-    elif not XAI_API_KEY:
-        st.error("❌ API Key bulunamadı.")
+        st.error("❌ Bina fotoğrafı yükleyin!")
+    elif not HF_TOKEN:
+        st.error("❌ Hugging Face Token bulunamadı. Railway'e HF_TOKEN ekleyin.")
     else:
-        with st.spinner(""):
+        with st.spinner("Ücretsiz model çalışıyor... (30-60 saniye)"):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS söve modelini 
-                mükemmel perspektif, gerçekçi ışık, gölge, cam yansıması ve seamless blending ile oturt. 
-                Söve tam olarak orijinal ürün gibi dursun. Binada başka hiçbir şeyi değiştirme. 
-                Çok profesyonel mimari render kalitesinde olsun.
+                Bu binadaki TÜM pencerelere {selected_code} kodlu modern XPS söve modelini 
+                çok gerçekçi perspektif, ışık, gölge ve kusursuz uyum ile yerleştir. 
+                Söve orijinal ürün gibi dursun. Binada başka hiçbir şeyi değiştirme.
                 """
 
-                response = requests.post(
-                    "https://api.x.ai/v1/images/edits",
-                    headers={"Authorization": f"Bearer {XAI_API_KEY}", "Content-Type": "application/json"},
-                    json={
-                        "model": "grok-imagine-image",
-                        "prompt": prompt,
-                        "image": {"url": f"data:image/jpeg;base64,{building_b64}"}
+                # Hugging Face Inference (Ücretsiz)
+                API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev"
+                
+                headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+
+                payload = {
+                    "inputs": prompt,
+                    "parameters": {
+                        "image": f"data:image/jpeg;base64,{building_b64}"
                     }
-                )
+                }
+
+                response = requests.post(API_URL, headers=headers, json=payload)
 
                 if response.status_code == 200:
-                    result = response.json()
-                    image_url = None
-                    if "data" in result and len(result["data"]) > 0:
-                        image_url = result["data"][0].get("url")
-                    elif "output" in result and isinstance(result["output"], dict):
-                        image_url = result["output"].get("url")
-                    elif "url" in result:
-                        image_url = result.get("url")
-
-                    if image_url:
-                        img_data = requests.get(image_url).content
-                        st.success("✅ İşlem tamamlandı!")
-                        st.image(img_data, caption="Sonuç", use_container_width=True)
-
-                        st.download_button(
-                            label="📥 Sonucu İndir (JPG)",
-                            data=img_data,
-                            file_name=f"sove_{selected_code}.jpg",
-                            mime="image/jpeg"
-                        )
-                    else:
-                        st.error("Sonuç URL'si alınamadı.")
+                    st.success("✅ İşlem tamamlandı!")
+                    st.image(response.content, caption="Sonuç", use_container_width=True)
+                    
+                    st.download_button(
+                        label="📥 Sonucu İndir",
+                        data=response.content,
+                        file_name=f"sove_{selected_code}.jpg",
+                        mime="image/jpeg"
+                    )
                 else:
-                    st.error(f"API Hatası: {response.status_code}")
+                    st.error(f"Hata: {response.status_code} - {response.text[:200]}")
 
             except Exception as e:
-                st.error(f"Hata: {str(e)}")
+                st.error(f"Genel Hata: {str(e)}")
 
 st.caption(f"Versiyon: {VERSION}")
