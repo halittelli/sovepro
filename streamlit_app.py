@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import base64
 from io import BytesIO
+from PIL import Image
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Evimde Gör - Ücretsiz Test", page_icon="🏠", layout="wide")
@@ -11,14 +12,27 @@ st.markdown("<h1 style='text-align: center;'>🏠 Evimde Gör: Ücretsiz Test Mo
 with st.sidebar:
     st.header("⚙️ Ayarlar")
     hf_token = st.text_input("Hugging Face Token (HF_...)", type="password")
-    st.info("Ücretsiz test için Hugging Face 'Access Token' gereklidir.")
+    st.info("Büyük dosyalar otomatik olarak optimize edilecektir.")
+
+# --- GÖRSEL OPTİMİZASYON FONKSİYONU ---
+def optimize_image(uploaded_file):
+    img = Image.open(uploaded_file)
+    # Eğer görsel çok büyükse 1024px genişliğe düşür (Hata 413'ü önler)
+    if img.width > 1024 or img.height > 1024:
+        img.thumbnail((1024, 1024))
+    
+    # Görseli bytes formatına çevir
+    buffer = BytesIO()
+    img = img.convert("RGB") # JPG formatı için RGB şart
+    img.save(buffer, format="JPEG", quality=85)
+    return buffer.getvalue()
 
 # --- ARAYÜZ ---
 col1, col2 = st.columns([1, 1])
 
 with col1:
     st.subheader("📸 Bina Fotoğrafı")
-    building_file = st.file_uploader("Binanın fotoğrafını yükleyin", type=["jpg", "png", "jpeg"])
+    building_file = st.file_uploader("Binayı yükleyin", type=["jpg", "png", "jpeg"])
     if building_file:
         st.image(building_file, caption="Orijinal Bina", use_container_width=True)
 
@@ -26,20 +40,15 @@ with col2:
     st.subheader("🏠 Söve Seçimi")
     tc_codes = [f"TC{i:03d}" for i in range(1, 25)] 
     selected_code = st.selectbox("Söve Modelini Seçin", tc_codes)
-    
-    # GitHub'daki görselini referans alıyoruz
-    repo_url = "https://raw.githubusercontent.com/halitelli/sovepro/main"
-    preview_url = f"{repo_url}/{selected_code}.png"
+    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
     st.image(preview_url, caption=f"Seçilen Model: {selected_code}", use_container_width=True)
 
 # --- ÜCRETSİZ MOTOR FONKSİYONU ---
-def query_pix2pix(image_file, prompt, token):
-    # Bu model görsel düzenleme için en iyi ücretsiz seçenektir
+def query_pix2pix(image_bytes, prompt, token):
     API_URL = "https://api-inference.huggingface.co/models/timbrooks/instruct-pix2pix"
     headers = {"Authorization": f"Bearer {token}"}
     
-    # Görseli base64 formatına çeviriyoruz (JSON hatasını bu çözer)
-    encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
+    encoded_image = base64.b64encode(image_bytes).decode("utf-8")
     
     payload = {
         "inputs": prompt,
@@ -61,24 +70,24 @@ def query_pix2pix(image_file, prompt, token):
 # --- İŞLEM ---
 if st.button("🚀 Ücretsiz Söve Giydirmeyi Dene", type="primary", use_container_width=True):
     if not building_file or not hf_token:
-        st.error("Lütfen fotoğraf yükleyin ve Hugging Face Token girin!")
+        st.error("Lütfen fotoğraf yükleyin ve HF Token girin!")
     else:
-        with st.spinner("Yapay zeka pencereleri analiz ediyor..."):
+        with st.spinner("Görsel optimize ediliyor ve AI'ya gönderiliyor..."):
             try:
-                # Görseli en başa sar (okunabilir olması için)
-                building_file.seek(0)
+                # 1. Görseli optimize et (413 hatasını çözer)
+                optimized_bytes = optimize_image(building_file)
                 
-                # Talimat: 'Pencere kenarlarına beyaz söve ekle'
-                instruction = f"add white architectural {selected_code} style window moldings to all windows of this building. keep the building original."
+                # 2. Talimat
+                instruction = f"add white decorative architectural {selected_code} style window frame moldings to the windows. original building must be preserved."
                 
-                result = query_pix2pix(building_file, instruction, hf_token)
+                # 3. API'ye gönder
+                result = query_pix2pix(optimized_bytes, instruction, hf_token)
                 
                 if result:
                     st.success("✅ Test tamamlandı!")
-                    st.image(result, caption="AI Uygulama Sonucu (Ücretsiz Model)", use_container_width=True)
-                    st.info("Not: Bu ücretsiz bir modeldir. Profesyonel ve binayı hiç bozmayan sonuç için bakiye yükleyip Replicate (ControlNet) motoruna geçeceğiz.")
+                    st.image(result, caption="AI Uygulama Sonucu (Hafifletilmiş Sürüm)", use_container_width=True)
             except Exception as e:
                 st.error(f"Hata oluştu: {str(e)}")
 
 st.divider()
-st.caption("Evimde Gör v7.2 - Freelance 3D Artist Halit Telli")
+st.caption("Evimde Gör v7.3 - Büyük Dosya Desteği Eklendi")
