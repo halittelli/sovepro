@@ -3,14 +3,13 @@ import requests
 import base64
 import os
 
-VERSION = "v3.0 - Ücretsiz HF Versiyon"
+VERSION = "v3.1 - HF Ücretsiz + Hata Düzeltilmiş"
 
 st.set_page_config(page_title="Evimde Gör", page_icon="🏠", layout="wide")
 
 st.markdown("<h1 style='text-align: center; margin-bottom: 8px;'>Evimde Gör</h1>", unsafe_allow_html=True)
-st.caption(f"<p style='text-align: center; color: #555;'>Versiyon: {VERSION} - Ücretsiz Mod</p>", unsafe_allow_html=True)
+st.caption(f"<p style='text-align: center; color: #555;'>Versiyon: {VERSION}</p>", unsafe_allow_html=True)
 
-# Hugging Face Token (Railway Variables'a HF_TOKEN olarak ekle)
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 col1, col2 = st.columns([3, 2])
@@ -36,7 +35,7 @@ if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
     elif not HF_TOKEN:
-        st.error("❌ Hugging Face Token bulunamadı. Railway'e HF_TOKEN ekleyin.")
+        st.error("❌ HF_TOKEN bulunamadı. Railway Variables'a ekleyin.")
     else:
         with st.spinner("Ücretsiz model çalışıyor... (30-60 saniye)"):
             try:
@@ -44,22 +43,15 @@ if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                Bu binadaki TÜM pencerelere {selected_code} kodlu modern XPS söve modelini 
-                çok gerçekçi perspektif, ışık, gölge ve kusursuz uyum ile yerleştir. 
-                Söve orijinal ürün gibi dursun. Binada başka hiçbir şeyi değiştirme.
+                Bu binadaki TÜM pencerelere {selected_code} kodlu Sovetalya XPS söve modelini 
+                mükemmel perspektif, gerçekçi ışık, gölge ve seamless blending ile oturt. 
+                Söve tam olarak orijinal ürün gibi dursun. Binada başka hiçbir şeyi değiştirme.
                 """
 
-                # Hugging Face Inference (Ücretsiz)
                 API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev"
                 
                 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-
-                payload = {
-                    "inputs": prompt,
-                    "parameters": {
-                        "image": f"data:image/jpeg;base64,{building_b64}"
-                    }
-                }
+                payload = {"inputs": prompt}
 
                 response = requests.post(API_URL, headers=headers, json=payload)
 
@@ -74,7 +66,7 @@ if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
                         mime="image/jpeg"
                     )
                 else:
-                    st.error(f"Hata: {response.status_code} - {response.text[:200]}")
+                    st.error(f"API Hatası: {response.status_code} - {response.text[:300]}")
 
             except Exception as e:
                 st.error(f"Genel Hata: {str(e)}")
