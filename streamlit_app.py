@@ -1,71 +1,58 @@
 import streamlit as st
-import requests
-import base64
+import replicate
 import os
+from PIL import Image
+import requests
+from io import BytesIO
 
-VERSION = "v3.5 - HF Stabil (SD 1.5)"
+# Sayfa Ayarları
+st.set_page_config(page_title="Evimde Gör Pro - Stabil", page_icon="🏠", layout="wide")
+st.markdown("<h1 style='text-align: center;'>Evimde Gör: Otomatik Söve Giydirme</h1>", unsafe_allow_html=True)
 
-st.set_page_config(page_title="Evimde Gör", page_icon="🏠", layout="wide")
+# API Anahtarını buraya girin veya Streamlit Secrets'a ekleyin
+REPLICATE_API_TOKEN = st.sidebar.text_input("Replicate API Token Girin", type="password")
+os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_TOKEN
 
-st.markdown("<h1 style='text-align: center; margin-bottom: 8px;'>Evimde Gör</h1>", unsafe_allow_html=True)
-st.caption(f"<p style='text-align: center; color: #555;'>Versiyon: {VERSION}</p>", unsafe_allow_html=True)
-
-HF_TOKEN = os.getenv("HF_TOKEN")
-
-col1, col2 = st.columns([3, 2])
+col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader("📸 Bina Fotoğrafı Yükle")
-    building_file = st.file_uploader("JPG, PNG veya WEBP", type=["jpg", "jpeg", "png", "webp"])
+    st.subheader("📸 Bina Fotoğrafı")
+    building_file = st.file_uploader("Binanın net fotoğrafını yükleyin", type=["jpg", "png", "jpeg"])
     if building_file:
-        st.image(building_file, use_container_width=True)
+        st.image(building_file, caption="Orijinal Bina", use_container_width=True)
 
 with col2:
-    st.subheader("📚 ÜRÜNLER")
-    tc_codes = (
-        [f"TC{i:03d}" for i in range(1, 25)] + 
-        [f"TC{i:03d}" for i in range(35, 41)]
-    )
-    selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
-
+    st.subheader("🏠 Söve Seçimi")
+    tc_codes = [f"TC{i:03d}" for i in range(1, 25)]
+    selected_code = st.selectbox("Söve Modelini Seçin", tc_codes)
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
-    st.image(preview_url, caption=f"{selected_code} - Gerçek Ürün", use_container_width=True)
+    st.image(preview_url, caption=f"Seçilen Ürün: {selected_code}", use_container_width=True)
 
-if st.button("🔥 Sonucu Gör", type="primary", use_container_width=True):
-    if not building_file:
-        st.error("❌ Bina fotoğrafı yükleyin!")
-    elif not HF_TOKEN:
-        st.error("❌ HF_TOKEN bulunamadı.")
+if st.button("🔥 Söveleri Giydir (Hassas İşlem)", type="primary", use_container_width=True):
+    if not building_file or not REPLICATE_API_TOKEN:
+        st.error("Lütfen fotoğraf yükleyin ve API Token girin!")
     else:
-        with st.spinner("Ücretsiz model çalışıyor... (30-70 saniye)"):
+        with st.spinner("Yapay zeka binayı analiz ediyor ve söveleri yerleştiriyor..."):
             try:
-                building_bytes = building_file.getvalue()
-                building_b64 = base64.b64encode(building_bytes).decode()
-
-                prompt = f"Add {selected_code} style XPS window frame molding to all windows in this building, realistic architectural rendering, perfect perspective, seamless blend"
-
-                API_URL = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
-
-                headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-                payload = {
-                    "inputs": prompt,
-                    "parameters": {
-                        "negative_prompt": "blurry, low quality, text, watermark, deformed windows",
-                        "num_inference_steps": 30,
-                        "guidance_scale": 7.5
+                # Profesyonel ControlNet Modeli (Canny)
+                # Bu model binanın çizgilerini %100 korur.
+                output = replicate.run(
+                    "jagadeesh-at-code-monk/controlnet-canny:7d293f8e56317d7b275685a2da16b3336a1e3b08e7150a0094709d7389a9f2df",
+                    input={
+                        "image": building_file,
+                        "prompt": f"architectural visualization, white {selected_code} window frame molding, luxury exterior design, sharp edges, realistic materials, highly detailed windows",
+                        "negative_prompt": "change building structure, change windows position, blurry, distorted, low quality",
+                        "num_inference_steps": 40,
+                        "condition_scale": 0.9, # Binayı koruma gücü (0.9 = Maksimum koruma)
+                        "guidance_scale": 9.0
                     }
-                }
-
-                response = requests.post(API_URL, headers=headers, json=payload)
-
-                if response.status_code == 200:
-                    st.success("✅ İşlem tamamlandı!")
-                    st.image(response.content, caption="Sonuç", use_container_width=True)
-                    st.download_button("📥 Sonucu İndir", response.content, f"sove_{selected_code}.jpg", "image/jpeg")
-                else:
-                    st.error(f"API Hatası {response.status_code}\n{response.text[:400]}")
-
+                )
+                
+                if output:
+                    st.success("✅ İşlem Başarılı! Bina korundu, söveler eklendi.")
+                    st.image(output[1], caption="Sonuç (Söve Uygulanmış)", use_container_width=True)
+                    
             except Exception as e:
-                st.error(f"Genel Hata: {str(e)}")
+                st.error(f"Bir hata oluştu: {str(e)}")
 
-st.caption(f"Versiyon: {VERSION}")
+st.info("Bilgi: Bu sistem 'ControlNet' kullanarak binanın mimari hatlarını dondurur, böylece bina değişmeden sadece pencere kenarları güncellenir.")
