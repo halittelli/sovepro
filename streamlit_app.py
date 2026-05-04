@@ -1,17 +1,17 @@
 import streamlit as st
 import requests
-import os
+import base64
+from io import BytesIO
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Evimde Gör - Test Modu", page_icon="🏠", layout="wide")
-st.markdown("<h1 style='text-align: center;'>🏠 Evimde Gör: Ücretsiz Test</h1>", unsafe_allow_html=True)
+st.set_page_config(page_title="Evimde Gör - Ücretsiz Test", page_icon="🏠", layout="wide")
+st.markdown("<h1 style='text-align: center;'>🏠 Evimde Gör: Ücretsiz Test Modu</h1>", unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("⚙️ Ayarlar")
-    # Hugging Face Token'ını buraya girmen gerekiyor
     hf_token = st.text_input("Hugging Face Token (HF_...)", type="password")
-    st.info("Ücretsiz test için Hugging Face Token gereklidir.")
+    st.info("Ücretsiz test için Hugging Face 'Access Token' gereklidir.")
 
 # --- ARAYÜZ ---
 col1, col2 = st.columns([1, 1])
@@ -24,24 +24,26 @@ with col1:
 
 with col2:
     st.subheader("🏠 Söve Seçimi")
-    # GitHub'daki dosya isimlerine tam uyumlu liste
     tc_codes = [f"TC{i:03d}" for i in range(1, 25)] 
     selected_code = st.selectbox("Söve Modelini Seçin", tc_codes)
     
-    # GitHub'dan görsel referansı (Ekran görüntündeki konuma göre ayarlandı)
+    # GitHub'daki görselini referans alıyoruz
     repo_url = "https://raw.githubusercontent.com/halitelli/sovepro/main"
     preview_url = f"{repo_url}/{selected_code}.png"
-    
     st.image(preview_url, caption=f"Seçilen Model: {selected_code}", use_container_width=True)
 
-# --- ÜCRETSİZ MOTOR (HF INFERENCE) ---
-def run_test(image_bytes, instruction, token):
+# --- ÜCRETSİZ MOTOR FONKSİYONU ---
+def query_pix2pix(image_file, prompt, token):
+    # Bu model görsel düzenleme için en iyi ücretsiz seçenektir
     API_URL = "https://api-inference.huggingface.co/models/timbrooks/instruct-pix2pix"
     headers = {"Authorization": f"Bearer {token}"}
     
+    # Görseli base64 formatına çeviriyoruz (JSON hatasını bu çözer)
+    encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
+    
     payload = {
-        "inputs": instruction,
-        "image": image_bytes,
+        "inputs": prompt,
+        "image": encoded_image,
         "parameters": {
             "num_inference_steps": 20,
             "image_guidance_scale": 1.5,
@@ -53,27 +55,30 @@ def run_test(image_bytes, instruction, token):
     if response.status_code == 200:
         return response.content
     else:
-        st.error(f"Hata Kodu: {response.status_code} - {response.text}")
+        st.error(f"API Hatası ({response.status_code}): {response.text}")
         return None
 
 # --- İŞLEM ---
-if st.button("🚀 Söveyi Binaya Giydirmeyi Dene", type="primary", use_container_width=True):
+if st.button("🚀 Ücretsiz Söve Giydirmeyi Dene", type="primary", use_container_width=True):
     if not building_file or not hf_token:
-        st.error("Lütfen fotoğraf yükleyin ve HF Token girin!")
+        st.error("Lütfen fotoğraf yükleyin ve Hugging Face Token girin!")
     else:
-        with st.spinner("Ücretsiz model pencereleri analiz ediyor..."):
+        with st.spinner("Yapay zeka pencereleri analiz ediyor..."):
             try:
-                img_data = building_file.getvalue()
-                # Talimatı net veriyoruz
-                prompt = f"add white architectural {selected_code} window frames to all windows of this building"
+                # Görseli en başa sar (okunabilir olması için)
+                building_file.seek(0)
                 
-                result = run_test(img_data, prompt, hf_token)
+                # Talimat: 'Pencere kenarlarına beyaz söve ekle'
+                instruction = f"add white architectural {selected_code} style window moldings to all windows of this building. keep the building original."
+                
+                result = query_pix2pix(building_file, instruction, hf_token)
                 
                 if result:
                     st.success("✅ Test tamamlandı!")
-                    st.image(result, caption="AI Uygulama Sonucu", use_container_width=True)
+                    st.image(result, caption="AI Uygulama Sonucu (Ücretsiz Model)", use_container_width=True)
+                    st.info("Not: Bu ücretsiz bir modeldir. Profesyonel ve binayı hiç bozmayan sonuç için bakiye yükleyip Replicate (ControlNet) motoruna geçeceğiz.")
             except Exception as e:
-                st.error(f"Hata: {str(e)}")
+                st.error(f"Hata oluştu: {str(e)}")
 
 st.divider()
-st.caption("Evimde Gör v7.1 | GitHub Entegrasyonu Hazır")
+st.caption("Evimde Gör v7.2 - Freelance 3D Artist Halit Telli")
