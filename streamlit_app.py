@@ -1,93 +1,93 @@
 import streamlit as st
+import replicate
+import os
 import requests
-import base64
-from io import BytesIO
 from PIL import Image
+from io import BytesIO
 
-# --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Evimde Gör - Ücretsiz Test", page_icon="🏠", layout="wide")
-st.markdown("<h1 style='text-align: center;'>🏠 Evimde Gör: Ücretsiz Test Modu</h1>", unsafe_allow_html=True)
+# --- SAYFA YAPILANDIRMASI ---
+st.set_page_config(page_title="Evimde Gör PRO", page_icon="🏢", layout="wide")
 
-# --- SIDEBAR ---
+# --- GÜVENLİK VE API AYARI ---
+# API Key'i doğrudan koda yazmıyoruz, sidebar'dan alıyoruz (Güvenlik için)
 with st.sidebar:
-    st.header("⚙️ Ayarlar")
-    hf_token = st.text_input("Hugging Face Token (HF_...)", type="password")
-    st.info("Büyük dosyalar otomatik olarak optimize edilecektir.")
+    st.header("🔑 Pro Bağlantı")
+    replicate_api_token = st.text_input("Replicate API Token giriniz:", type="password")
+    if replicate_api_token:
+        os.environ["REPLICATE_API_TOKEN"] = replicate_api_token
+        st.success("Bağlantı Başarılı!")
+    else:
+        st.warning("Lütfen API Token giriniz.")
 
-# --- GÖRSEL OPTİMİZASYON FONKSİYONU ---
-def optimize_image(uploaded_file):
-    img = Image.open(uploaded_file)
-    # Eğer görsel çok büyükse 1024px genişliğe düşür (Hata 413'ü önler)
-    if img.width > 1024 or img.height > 1024:
-        img.thumbnail((1024, 1024))
-    
-    # Görseli bytes formatına çevir
-    buffer = BytesIO()
-    img = img.convert("RGB") # JPG formatı için RGB şart
-    img.save(buffer, format="JPEG", quality=85)
-    return buffer.getvalue()
+st.title("🏢 Evimde Gör: Profesyonel Söve Uygulaması")
+st.markdown("---")
 
 # --- ARAYÜZ ---
 col1, col2 = st.columns([1, 1])
 
 with col1:
     st.subheader("📸 Bina Fotoğrafı")
-    building_file = st.file_uploader("Binayı yükleyin", type=["jpg", "png", "jpeg"])
-    if building_file:
-        st.image(building_file, caption="Orijinal Bina", use_container_width=True)
+    uploaded_file = st.file_uploader("Binanın yüksek çözünürlüklü fotoğrafını yükleyin", type=["jpg", "png", "jpeg"])
+    if uploaded_file:
+        st.image(uploaded_file, caption="Orijinal Bina", use_container_width=True)
 
 with col2:
-    st.subheader("🏠 Söve Seçimi")
+    st.subheader("🛠️ Söve Seçimi")
+    # GitHub'daki resim listene göre ayarlandı
     tc_codes = [f"TC{i:03d}" for i in range(1, 25)] 
-    selected_code = st.selectbox("Söve Modelini Seçin", tc_codes)
+    selected_code = st.selectbox("Uygulanacak Söve Modelini Seçin", tc_codes)
+    
+    # GitHub'dan önizleme
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
-    st.image(preview_url, caption=f"Seçilen Model: {selected_code}", use_container_width=True)
+    st.image(preview_url, caption=f"Seçilen Model: {selected_code}", width=200)
 
-# --- ÜCRETSİZ MOTOR FONKSİYONU ---
-def query_pix2pix(image_bytes, prompt, token):
-    API_URL = "https://api-inference.huggingface.co/models/timbrooks/instruct-pix2pix"
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    encoded_image = base64.b64encode(image_bytes).decode("utf-8")
-    
-    payload = {
-        "inputs": prompt,
-        "image": encoded_image,
-        "parameters": {
-            "num_inference_steps": 20,
-            "image_guidance_scale": 1.5,
-            "guidance_scale": 7.5
-        }
-    }
-    
-    response = requests.post(API_URL, headers=headers, json=payload)
-    if response.status_code == 200:
-        return response.content
+# --- PRO İŞLEMCİ (REPLICATE SDXL CANNY) ---
+if st.button("🚀 Söveyi Binaya Giydir (Profesyonel İşlem)", type="primary", use_container_width=True):
+    if not uploaded_file or not replicate_api_token:
+        st.error("Lütfen önce bina fotoğrafını yükleyin ve API Token'ı girin!")
     else:
-        st.error(f"API Hatası ({response.status_code}): {response.text}")
-        return None
-
-# --- İŞLEM ---
-if st.button("🚀 Ücretsiz Söve Giydirmeyi Dene", type="primary", use_container_width=True):
-    if not building_file or not hf_token:
-        st.error("Lütfen fotoğraf yükleyin ve HF Token girin!")
-    else:
-        with st.spinner("Görsel optimize ediliyor ve AI'ya gönderiliyor..."):
+        with st.spinner("AI Analiz Yapıyor: Pencereler tespit ediliyor ve söveler yerleştiriliyor..."):
             try:
-                # 1. Görseli optimize et (413 hatasını çözer)
-                optimized_bytes = optimize_image(building_file)
+                # 1. Fotoğrafı Replicate'e gönderilecek formata hazırla
+                # SDXL Canny Modeli (En stabil ve kaliteli olanlardan biri)
+                model_version = "lucataco/sdxl-controlnet:db21e45d3f051393749a435ad9998e75147348ca3ca30467a84594c736561110"
                 
-                # 2. Talimat
-                instruction = f"add white decorative architectural {selected_code} style window frame moldings to the windows. original building must be preserved."
+                # 2. AI Talimatı (Prompt)
+                # Senin söve modelini ve beyaz rengi vurguluyoruz
+                prompt = (f"Ultra-realistic architectural photography of a building. "
+                          f"The windows are decorated with thick white decorative {selected_code} style window moldings. "
+                          f"High quality exterior design, clean lines, professional construction.")
                 
-                # 3. API'ye gönder
-                result = query_pix2pix(optimized_bytes, instruction, hf_token)
-                
-                if result:
-                    st.success("✅ Test tamamlandı!")
-                    st.image(result, caption="AI Uygulama Sonucu (Hafifletilmiş Sürüm)", use_container_width=True)
+                negative_prompt = "distorted, blurry, low quality, deformed windows, messy colors, messy architecture"
+
+                # 3. Replicate Çalıştır
+                output = replicate.run(
+                    model_version,
+                    input={
+                        "image": uploaded_file,
+                        "prompt": prompt,
+                        "negative_prompt": negative_prompt,
+                        "controlnet_conditioning_scale": 0.8, # Binayı ne kadar koruyacağı (0.8 idealdir)
+                        "canney_low_threshold": 100,
+                        "canney_high_threshold": 200,
+                        "num_inference_steps": 30,
+                        "guidance_scale": 7.5
+                    }
+                )
+
+                # 4. Sonucu Göster
+                if output:
+                    st.success("✅ İşlem Tamamlandı!")
+                    # Replicate genellikle bir liste döner
+                    result_url = output[0] if isinstance(output, list) else output
+                    st.image(result_url, caption=f"Uygulanan Söve: {selected_code}", use_container_width=True)
+                    
+                    # İndirme butonu
+                    img_res = requests.get(result_url)
+                    st.download_button("📥 Sonucu İndir", data=img_res.content, file_name=f"{selected_code}_uygulama.png")
+
             except Exception as e:
-                st.error(f"Hata oluştu: {str(e)}")
+                st.error(f"Bir hata oluştu: {str(e)}")
 
 st.divider()
-st.caption("Evimde Gör v7.3 - Büyük Dosya Desteği Eklendi")
+st.caption("Evimde Gör v8.0 PRO | Powered by Replicate & SDXL")
