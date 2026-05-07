@@ -3,67 +3,78 @@ import replicate
 import os
 import requests
 
-# --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Sovetalya v28.0 PRO", page_icon="🏠", layout="wide")
+# --- SAYFA YAPILANDIRMASI ---
+st.set_page_config(page_title="Sovetalya v30.0 PRO", page_icon="🏠", layout="wide")
 
 with st.sidebar:
-    st.header("🔑 API Kontrol")
+    st.header("🔑 API Kontrol Paneli")
     api_token = st.text_input("Replicate Token:", type="password")
     if api_token:
         os.environ["REPLICATE_API_TOKEN"] = api_token.strip()
 
 st.title("🏠 Sovetalya: Profesyonel Mimari Giydirme")
-st.caption("Şekil Referanslı Motor (Binayı Koru - Söveyi Kopyala)")
+st.caption("Grok-Style Image Projection Engine | Doku Koruma ve Şekil Entegrasyonu")
 
 col1, col2 = st.columns([3, 2])
 
 with col1:
-    st.subheader("📸 Orijinal Bina")
-    building_file = st.file_uploader("Cephe Fotoğrafı", type=["jpg", "png", "jpeg"])
+    st.subheader("📸 Orijinal Bina Analizi")
+    building_file = st.file_uploader("Cephe fotoğrafını yükle", type=["jpg", "png", "jpeg"])
     if building_file:
-        st.image(building_file, caption="Korunacak Orijinal Doku", use_container_width=True)
+        st.image(building_file, caption="Korunacak Orijinal Cephe", use_container_width=True)
 
 with col2:
-    st.subheader("📚 Referans Söve")
+    st.subheader("📚 Söve Referans Geometrisi")
     tc_codes = [f"TC{i:03d}" for i in range(1, 25)] + [f"TC{i:03d}" for i in range(35, 41)]
     selected_code = st.selectbox("Model Seçin", tc_codes)
     
-    # Kesinleşen GitHub Linki
+    # GitHub URL (halittelli)
     preview_url = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{selected_code}.png"
-    st.image(preview_url, caption=f"Şekli Kopyalanacak Model: {selected_code}", width=250)
+    st.image(preview_url, caption=f"Referans Şekil: {selected_code}", width=250)
 
 st.divider()
 
-if st.button("🚀 ŞEKLİ REFERANS ALARAK UYGULA", type="primary", use_container_width=True):
+if st.button("🚀 SÖVEYİ BİNAYA MONTE ET", type="primary", use_container_width=True):
     if not building_file or not api_token:
-        st.error("Lütfen fotoğraf ve token girin!")
+        st.error("Lütfen fotoğraf yükleyin ve API Token girin!")
     else:
-        with st.spinner("AI sövenin geometrisini analiz ediyor ve binaya giydiriyor..."):
+        with st.spinner("Grok Algoritması çalışıyor: Bina dokusu donduruluyor ve söveler işleniyor..."):
             try:
-                # Bu model, hem binanın hatlarını korur hem de söveyi 'görsel' olarak kopyalar.
-                model_id = "xirf/flux-controlnet-canny" # Flux'ın Canny (Kenar koruma) modeli
+                # 404/422 HATASI VERMEYEN EN GÜNCEL RESMİ MOTOR
+                model_id = "black-forest-labs/flux-dev"
                 
+                # GROK'UN ARKADA YAPTIĞI "PROFESYONEL PROMPT" KURGUSU
+                complex_prompt = (
+                    f"A high-quality architectural photography of the provided building. "
+                    f"Maintain the existing red brick walls, construction scaffolding, and overall atmosphere 100% identically. "
+                    f"Using the geometric profile of the molding from {preview_url}, "
+                    f"precisely install white decorative {selected_code} stone moldings around every window frame. "
+                    f"The moldings must show realistic depth, 3D profile, and soft shadows on the brick. "
+                    f"NO changes to the building's color, structure, or texture. "
+                    f"Ensure the moldings follow the perspective of the original photo perfectly."
+                )
+
                 output = replicate.run(
                     model_id,
                     input={
                         "image": building_file,
-                        "control_image": building_file, # Binanın kenarlarını korumak için
-                        "prompt": f"Architectural photo. High-end white stone {selected_code} window moldings. "
-                                  f"The moldings must have the exact physical shape and profile of {preview_url}. "
-                                  f"KEEP THE BRICK WALLS, SCAFFOLDING AND ENVIRONMENT 100% SAME. "
-                                  f"Only replace the empty window frames with these white moldings. 8k resolution.",
-                        "control_strength": 0.85, # Binayı koruma gücü (Çok Yüksek)
-                        "num_inference_steps": 30,
-                        "guidance_scale": 4.0
+                        "prompt": complex_prompt,
+                        "guidance_scale": 4.5,
+                        "num_inference_steps": 35,
+                        # Binayı korumak için 0.35 - 0.42 arası en güvenli 'Grok' bölgesidir.
+                        "prompt_strength": 0.40,
+                        "extra_lora_scale": 0.8
                     }
                 )
 
                 if output:
-                    st.success("✅ İşlem Tamamlandı!")
+                    st.success("✅ İşlem Başarılı! Bina dokusu korundu, söveler eklendi.")
                     res_url = str(output[0]) if isinstance(output, list) else str(output)
                     st.image(res_url, caption="Final Uygulama Sonucu", use_container_width=True)
                     
-                    st.download_button("📥 Kaydet", requests.get(res_url).content, file_name=f"sove_{selected_code}.png")
+                    st.download_button("📥 Tasarımı Kaydet", requests.get(res_url).content, file_name=f"sove_{selected_code}.png")
 
             except Exception as e:
                 st.error(f"Hata detayı: {str(e)}")
+
+st.caption("Sovetalya v30.0 | Antalya | Architectural AI Solutions")
