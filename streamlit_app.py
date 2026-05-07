@@ -4,17 +4,17 @@ import os
 import requests
 
 # --- SAYFA YAPILANDIRMASI ---
-st.set_page_config(page_title="Sovetalya v17.0 PRO", page_icon="🏠", layout="wide")
+st.set_page_config(page_title="Sovetalya v20.0 PRO", page_icon="🏠", layout="wide")
 
 with st.sidebar:
-    st.header("🔑 API Kontrol Paneli")
+    st.header("🔑 API Kontrol")
     api_token = st.text_input("Replicate Token:", type="password")
     if api_token:
         os.environ["REPLICATE_API_TOKEN"] = api_token.strip()
-        st.success("API Bağlantısı Aktif")
+        st.success("Bağlantı Aktif")
 
-st.title("🏠 Sovetalya: Akıllı Söve Uygulaması")
-st.caption("Flux.1 Dev Motoru - Dinamik Versiyon Kontrolü")
+st.title("🏠 Sovetalya: Profesyonel Söve Uygulaması")
+st.caption("Flux.1-Dev Motoru | Gelişmiş Önizleme Sistemi")
 
 col1, col2 = st.columns([3, 2])
 
@@ -25,63 +25,70 @@ with col1:
     if building_file:
         st.image(building_file, caption="Orijinal Cephe", use_container_width=True)
 
-# --- SAĞ SÜTUN: KATALOG ---
+# --- SAĞ SÜTUN: KATALOG (SENİN EN SON ÇALIŞAN SİSTEMİN) ---
 with col2:
     st.subheader("📚 Söve Kütüphanesi")
-    # Kod aralıklarını senin listene göre güncelledim
     tc_codes = (
         [f"TC{i:03d}" for i in range(1, 25)] + 
         [f"TC{i:03d}" for i in range(35, 41)]
     )
     selected_code = st.selectbox("Model Seçin", tc_codes)
     
-    # DÜZELTİLMİŞ URL: 'halitelli' (Tek 't') ve 'sove_images' klasörü eklendi
+    # SENİN EN SON ÇALIŞAN URL YAPIN:
+    # Kullanıcı adı: halitelli | Klasör: sove_images | Dosya: TCxxx.png
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/sove_images/{selected_code}.png"
     
+    # Görseli çekmeyi dene
     try:
-        response = requests.get(preview_url)
-        if response.status_code == 200:
+        res = requests.get(preview_url)
+        if res.status_code == 200:
             st.image(preview_url, caption=f"Katalog: {selected_code}", use_container_width=True)
         else:
-            st.warning(f"Görsel bulunamadı: {selected_code}. URL kontrol ediliyor...")
+            # Eğer klasör içindeyse bulamazsa, ana dizini dene (B planı)
+            fallback_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
+            res_fallback = requests.get(fallback_url)
+            if res_fallback.status_code == 200:
+                st.image(fallback_url, caption=f"Katalog: {selected_code}", use_container_width=True)
+            else:
+                st.warning(f"⚠️ {selected_code} önizlemesi yüklenemedi. GitHub yolunu kontrol edin.")
     except:
-        st.error("Katalog bağlantı hatası.")
+        st.error("Bağlantı hatası.")
 
 st.markdown("---")
 
+# --- İŞLEME BUTONU ---
 if st.button("🔥 SÖVEYİ OTURT (Flux Engine)", type="primary", use_container_width=True):
     if not building_file or not api_token:
-        st.error("Lütfen fotoğraf yükleyin ve API Token girin!")
+        st.error("Eksik bilgi: Fotoğraf yükleyin veya API Token girin.")
     else:
-        with st.spinner("AI Motoru en güncel sürümü doğruluyor ve söve giydiriliyor..."):
+        with st.spinner("Flux motoru söveleri binaya giydiriyor..."):
             try:
-                # --- DİNAMİK VERSİYON ÇEKME (KESİN ÇÖZÜM) ---
-                # Modelin ismini veriyoruz, en güncel ID'yi Python kendi buluyor
-                model = replicate.models.get("lucataco/flux-dev-img2img")
-                version_id = model.latest_version.id
+                # Replicate'in en iyi sonuç veren Image-to-Image Flux versiyonu
+                model_id = "black-forest-labs/flux-dev"
                 
                 output = replicate.run(
-                    f"lucataco/flux-dev-img2img:{version_id}",
+                    model_id,
                     input={
                         "image": building_file,
-                        "prompt": f"Extremely detailed architectural photography. Add white {selected_code} style architectural window moldings to the windows of this building. The moldings should be white stone texture, perfectly integrated with realistic shadows. Keep the rest of the building exactly the same. 8k resolution.",
-                        "prompt_strength": 0.45, # Binayı korumak için 0.45 idealdir
-                        "num_inference_steps": 28,
-                        "guidance_scale": 3.5
+                        "prompt": f"Professional architectural photo. Perfectly fit white {selected_code} style decorative window moldings around every window. The moldings must have a realistic white stone texture with natural shadows. Do not change the building walls, roof or environment. 8k resolution.",
+                        "prompt_strength": 0.40,  # Binayı korumak ve söveyi eklemek için ideal denge
+                        "num_inference_steps": 30,
+                        "guidance_scale": 4.5
                     }
                 )
 
                 if output:
-                    st.success("✅ İşlem Başarılı!")
+                    st.success("✅ Tasarım Başarıyla Oluşturuldu!")
                     res_url = str(output[0]) if isinstance(output, list) else str(output)
-                    st.image(res_url, caption="Final Uygulama Sonucu", use_container_width=True)
+                    st.image(res_url, caption="Uygulama Sonucu", use_container_width=True)
                     
-                    # İndirme Butonu
-                    btn_data = requests.get(res_url).content
-                    st.download_button("📥 Tasarımı Kaydet", data=btn_data, file_name=f"sove_{selected_code}.png")
+                    # İndirme
+                    st.download_button("📥 Sonucu Bilgisayara Kaydet", 
+                                     data=requests.get(res_url).content, 
+                                     file_name=f"sove_{selected_code}.png")
 
             except Exception as e:
-                st.error(f"Hata detayı: {str(e)}")
+                st.error(f"Hata: {str(e)}")
 
 st.divider()
-st.caption("Sovetalya v17.0 | Halit Telli | Antalya")
+st.caption("Sovetalya v20.0 | Halit Telli | Architectural AI Solutions")
