@@ -2,72 +2,78 @@ import streamlit as st
 import replicate
 import os
 import requests
-from io import BytesIO
 
-# Sayfa Ayarı
-st.set_page_config(page_title="Sovetalya Tanı Modülü", layout="wide")
+# --- SAYFA YAPILANDIRMASI ---
+st.set_page_config(page_title="Sovetalya PRO", page_icon="🏠", layout="wide")
 
 with st.sidebar:
-    st.header("🔑 API Kontrol")
-    token = st.text_input("Replicate Token (r8_ ile başlamalı):", type="password")
-    if token:
-        os.environ["REPLICATE_API_TOKEN"] = token.strip()
+    st.header("🔑 Replicate Bağlantısı")
+    api_token = st.text_input("API Token giriniz:", type="password")
+    if api_token:
+        os.environ["REPLICATE_API_TOKEN"] = api_token.strip()
+        st.success("API Yetkilendirildi!")
 
-st.title("🏠 Sovetalya: Hata Ayıklama ve Uygulama")
+st.title("🏠 Evimde Gör: Akıllı Söve Uygulaması")
+st.markdown("---")
 
-col1, col2 = st.columns(2)
+col1, col2 = st.columns([1, 1])
 
+# --- SOL SÜTUN: BİNA FOTOĞRAFI ---
 with col1:
-    uploaded_file = st.file_uploader("Bina Fotoğrafı Seç", type=["jpg", "jpeg", "png"])
+    st.subheader("📸 Bina Analizi")
+    uploaded_file = st.file_uploader("Cephe fotoğrafını yükle", type=["jpg", "png", "jpeg"])
     if uploaded_file:
-        st.image(uploaded_file, caption="Yüklenen Dosya", use_container_width=True)
+        st.image(uploaded_file, caption="Orijinal Cephe", use_container_width=True)
 
+# --- SAĞ SÜTUN: KATALOG ---
 with col2:
-    tc_codes = [f"TC{i:03d}" for i in range(1, 25)]
-    model_choice = st.selectbox("Söve Modeli", tc_codes)
-    # GitHub'dan görsel çekme (halittelli - çift t)
-    preview_url = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{model_choice}.png"
-    st.image(preview_url, width=200)
+    st.subheader("🛠️ Söve Modeli")
+    tc_codes = [f"TC{i:03d}" for i in range(1, 25)] 
+    selected_code = st.selectbox("Model Seçin", tc_codes)
+    
+    # GitHub Görseli (halittelli - çift t)
+    preview_url = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{selected_code}.png"
+    try:
+        if requests.get(preview_url).status_code == 200:
+            st.image(preview_url, caption=f"Katalog: {selected_code}", width=250)
+    except:
+        st.warning("Görsel yüklenemedi.")
 
-st.divider()
+st.markdown("---")
 
-if st.button("🚀 AI Motorunu Test Et ve Uygula"):
-    if not uploaded_file or not token:
-        st.error("Lütfen fotoğraf ve token bilgilerini girin.")
+if st.button("🚀 Söveyi Uygula", type="primary", use_container_width=True):
+    if not uploaded_file or not api_token:
+        st.error("Lütfen fotoğraf ve API Token bilgilerini eksiksiz girin!")
     else:
-        with st.spinner("Sistem analiz ediliyor..."):
+        with st.spinner("Yapay zeka binayı analiz edip söveleri yerleştiriyor..."):
             try:
-                # STRATEJİ: Dosyayı Bytes olarak oku (En güvenli yol)
-                file_bytes = uploaded_file.getvalue()
+                # PAYLAŞTIĞIN SNIPPET'TEKİ KESİN VERSİYON KODU (06d6fae3...):
+                model_version = "lucataco/sdxl-controlnet:06d6fae3b75ab68a28cd2900afa6033166910dd09fd9751047043a5bbb4c184b"
                 
-                # REPLICATE RESMİ SDXL-CANNY (Versiyon kodu içermeyen en stabil yol)
-                # Bu çağırma yöntemi her zaman en güncel çalışan versiyona gider.
-                model_name = "lucataco/sdxl-controlnet"
-                
+                # Sadece modelin kesinlikle tanıdığı parametreleri gönderiyoruz:
                 output = replicate.run(
-                    model_name,
+                    model_version,
                     input={
-                        "image": BytesIO(file_bytes), # Dosyayı ham haliyle gönderiyoruz
-                        "prompt": f"Professional architectural exterior, house facade, windows with white {model_choice} moldings, realistic white stone, photorealistic, 8k",
-                        "negative_prompt": "cartoon, blur, low quality, distorted, messy",
+                        "image": uploaded_file,
+                        "prompt": f"professional architectural photography of a building facade, windows are decorated with white architectural {selected_code} moldings, realistic white stone texture, 8k resolution, clean design",
+                        "negative_prompt": "cartoon, blurry, low quality, distorted windows, colorful frames",
                         "controlnet_conditioning_scale": 0.8,
-                        "num_inference_steps": 25,
-                        "guidance_scale": 7.5
+                        "num_inference_steps": 30
                     }
                 )
 
                 if output:
-                    st.success("BAŞARILI!")
-                    st.image(output[0] if isinstance(output, list) else output)
-            
-            except Exception as e:
-                # Hata 422 ise, detaylarını parçalayarak gösterelim
-                st.error("⚠️ KRİTİK HATA TESPİT EDİLDİ")
-                st.write(f"Hata Mesajı: {str(e)}")
-                
-                # Teknik Detay Analizi
-                if "422" in str(e):
-                    st.info("Teşhis: Gönderilen parametrelerden biri (image, prompt vb.) model tarafından reddedildi.")
-                    st.warning("Çözüm Önerisi: Replicate panelinden 'API' sekmesine bakıp, parametre isimlerinin değişip değişmediğini kontrol ediyoruz.")
+                    st.success("✅ Tasarım Başarıyla Tamamlandı!")
+                    res_url = output[0] if isinstance(output, list) else output
+                    st.image(res_url, caption=f"Sonuç: {selected_code} Uygulaması", use_container_width=True)
+                    
+                    st.download_button("📥 Sonucu Bilgisayara Kaydet", 
+                                     data=requests.get(res_url).content, 
+                                     file_name=f"{selected_code}_sove_tasarim.png")
 
-st.caption("Sovetalya v11.0 | Halit Telli")
+            except Exception as e:
+                st.error(f"Hata detayı: {str(e)}")
+                st.info("Eğer hala 422 alıyorsak, 'prompt' kelimesini koddaki input listesinden geçici olarak çıkarıp sadece 'image' ile deneyeceğiz.")
+
+st.divider()
+st.caption("Sovetalya v12.0 PRO | Halit Telli | Architectural AI Solutions")
