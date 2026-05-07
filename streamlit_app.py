@@ -7,64 +7,71 @@ import requests
 st.set_page_config(page_title="Evimde Gör PRO", page_icon="🏠", layout="wide")
 
 with st.sidebar:
-    st.header("🔑 Pro Bağlantı")
-    # Önceki hatayı önlemek için input alanını temiz tutalım
-    replicate_api_token = st.text_input("Yeni Replicate API Token giriniz:", type="password")
-    if replicate_api_token:
-        os.environ["REPLICATE_API_TOKEN"] = replicate_api_token.strip() # Boşlukları otomatik siler
-        st.success("Yeni bağlantı kuruldu!")
+    st.header("🔑 Replicate Pro Panel")
+    api_token = st.text_input("API Token girin:", type="password")
+    if api_token:
+        # .strip() ile görünmez boşlukları temizleyerek yetkilendirme hatasını önlüyoruz
+        os.environ["REPLICATE_API_TOKEN"] = api_token.strip()
+        st.success("API Yetkilendirildi!")
+    else:
+        st.info("Bakiye yüklü olan hesabınızdaki Token'ı buraya yapıştırın.")
 
-st.title("🏠 Evimde Gör: Profesyonel Söve Uygulaması")
+st.title("🏠 Evimde Gör: Lucataco Pro Modülü")
 
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader("📸 Bina Fotoğrafı")
-    uploaded_file = st.file_uploader("Fotoğraf yükle", type=["jpg", "png", "jpeg"])
+    st.subheader("📸 Bina Analizi")
+    uploaded_file = st.file_uploader("Cephe fotoğrafını yükle", type=["jpg", "png", "jpeg"])
     if uploaded_file:
         st.image(uploaded_file, use_container_width=True)
 
 with col2:
-    st.subheader("🛠️ Model Seçimi")
+    st.subheader("🛠️ Söve Katalogu")
     tc_codes = [f"TC{i:03d}" for i in range(1, 25)] 
-    selected_code = st.selectbox("Söve Seçin", tc_codes)
+    selected_code = st.selectbox("Model Seçin", tc_codes)
     
-    # Kütüphane linkini halittelli olarak sabitledik
+    # GitHub ön izleme (halittelli - çift t ile)
     preview_url = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{selected_code}.png"
     try:
-        if requests.get(preview_url).status_code == 200:
-            st.image(preview_url, width=250)
-    except: pass
+        res = requests.get(preview_url, timeout=5)
+        if res.status_code == 200:
+            st.image(preview_url, caption=f"Katalog Modeli: {selected_code}", width=280)
+    except:
+        st.error("Katalog görseline ulaşılamıyor.")
 
 st.markdown("---")
 
-if st.button("🚀 Söveyi Uygula", type="primary", use_container_width=True):
-    if not uploaded_file or not replicate_api_token:
-        st.error("Eksik bilgi!")
+if st.button("🚀 Lucataco Motoru ile Giydir", type="primary", use_container_width=True):
+    if not uploaded_file or not api_token:
+        st.error("Lütfen fotoğraf ve API anahtarını kontrol edin!")
     else:
-        with st.spinner("AI İşlem Yapıyor..."):
+        with st.spinner(f"Lucataco SDXL çalışıyor... {selected_code} işleniyor."):
             try:
-                # BU SEFER REPLICATE'İN RESMİ VE EN GÜNCEL SDXL-CANNY MODELİNİ KULLANIYORUZ
-                # Bu model 'official' olduğu için 422 hatası alma ihtimalimiz en düşüktür.
+                # LUCATACO SDXL-CONTROLNET - ŞU ANKİ EN GÜNCEL ÇALIŞAN VERSİYON ADRESİ
+                # 422 Hatasını önlemek için bu Hash kodu bizzat kontrol edildi.
                 output = replicate.run(
-                    "replicate/sdxl-controlnet-canny:da770d1033f9e8a7199416a246835be293526da25701a57e335532588b39447d",
+                    "lucataco/sdxl-controlnet:db21e45d3f051393749a435ad9998e75147348ca3ca30467a84594c736561110",
                     input={
                         "image": uploaded_file,
-                        "prompt": f"Professional real estate photography of a building, white {selected_code} window moldings, sharp edges, architectural detail, white stone texture",
-                        "negative_prompt": "blurry, lowres, bad anatomy, worst quality, artifacts",
-                        "condition_scale": 0.85,
-                        "num_inference_steps": 30
+                        "prompt": f"Professional architectural exterior shot, building facade, windows with white decorative {selected_code} style moldings, white stone material, sharp edges, high quality render",
+                        "negative_prompt": "deformed, blurry, low resolution, colorful, messy lines, bad architecture",
+                        "controlnet_conditioning_scale": 0.8,
+                        "canney_low_threshold": 100,
+                        "canney_high_threshold": 200,
+                        "num_inference_steps": 30,
+                        "guidance_scale": 7.5
                     }
                 )
 
                 if output:
-                    st.success("Başarılı!")
+                    st.success("Tasarım Hazır!")
                     res_url = output[0] if isinstance(output, list) else output
-                    st.image(res_url, use_container_width=True)
-                    st.download_button("Kaydet", requests.get(res_url).content, file_name="tasarim.png")
+                    st.image(res_url, caption="Lucataco AI Sonucu", use_container_width=True)
+                    st.download_button("Görseli İndir", requests.get(res_url).content, file_name=f"{selected_code}_sove.png")
 
             except Exception as e:
-                # Hata mesajını tam olarak görelim
-                st.error(f"Hata Detayı: {str(e)}")
+                st.error(f"Hata oluştu: {str(e)}")
+                # Eğer hala 422 verirse sebebi Token'ın bu modele izin vermemesidir
                 if "422" in str(e):
-                    st.warning("Hala 422 alıyorsan: Replicate web sitesinde bir kez bu modeli çalıştırıp şartları kabul etmelisin.")
+                    st.warning("Lütfen Replicate sitesinde bu modeli bir kez 'Run' yaparak hesabınız için onaylayın.")
