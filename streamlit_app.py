@@ -7,71 +7,73 @@ import requests
 st.set_page_config(page_title="Evimde Gör PRO", page_icon="🏠", layout="wide")
 
 with st.sidebar:
-    st.header("🔑 Replicate Pro Panel")
+    st.header("🔑 Replicate Yetkilendirme")
     api_token = st.text_input("API Token girin:", type="password")
     if api_token:
-        # .strip() ile görünmez boşlukları temizleyerek yetkilendirme hatasını önlüyoruz
+        # Görünmez boşlukları temizleyerek hata riskini sıfıra indiriyoruz
         os.environ["REPLICATE_API_TOKEN"] = api_token.strip()
-        st.success("API Yetkilendirildi!")
-    else:
-        st.info("Bakiye yüklü olan hesabınızdaki Token'ı buraya yapıştırın.")
+        st.success("API Bağlantısı Aktif!")
 
-st.title("🏠 Evimde Gör: Lucataco Pro Modülü")
+st.title("🏠 Evimde Gör: Akıllı Söve Uygulaması")
+st.markdown("---")
 
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader("📸 Bina Analizi")
+    st.subheader("📸 Bina Fotoğrafı")
     uploaded_file = st.file_uploader("Cephe fotoğrafını yükle", type=["jpg", "png", "jpeg"])
     if uploaded_file:
-        st.image(uploaded_file, use_container_width=True)
+        st.image(uploaded_file, caption="Orijinal Bina", use_container_width=True)
 
 with col2:
-    st.subheader("🛠️ Söve Katalogu")
+    st.subheader("🛠️ Söve Seçimi")
     tc_codes = [f"TC{i:03d}" for i in range(1, 25)] 
     selected_code = st.selectbox("Model Seçin", tc_codes)
     
-    # GitHub ön izleme (halittelli - çift t ile)
+    # Katalog Ön İzleme (halittelli - çift t)
     preview_url = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{selected_code}.png"
     try:
         res = requests.get(preview_url, timeout=5)
         if res.status_code == 200:
-            st.image(preview_url, caption=f"Katalog Modeli: {selected_code}", width=280)
+            st.image(preview_url, caption=f"Katalog: {selected_code}", width=280)
     except:
-        st.error("Katalog görseline ulaşılamıyor.")
+        st.warning("Katalog görseli yüklenemedi.")
 
 st.markdown("---")
 
-if st.button("🚀 Lucataco Motoru ile Giydir", type="primary", use_container_width=True):
+if st.button("🚀 Söveyi Binaya Uygula", type="primary", use_container_width=True):
     if not uploaded_file or not api_token:
-        st.error("Lütfen fotoğraf ve API anahtarını kontrol edin!")
+        st.error("Lütfen fotoğraf yükleyin ve API Token girin!")
     else:
-        with st.spinner(f"Lucataco SDXL çalışıyor... {selected_code} işleniyor."):
+        with st.spinner(f"AI Motoru Çalışıyor: {selected_code} pencerelere giydiriliyor..."):
             try:
-                # LUCATACO SDXL-CONTROLNET - ŞU ANKİ EN GÜNCEL ÇALIŞAN VERSİYON ADRESİ
-                # 422 Hatasını önlemek için bu Hash kodu bizzat kontrol edildi.
+                # EKRAN GÖRÜNTÜSÜNDEKİ 'LATEST' (EN GÜNCEL) VERSİYON KODU:
+                # '06d6fae3...' ile başlayan tam ID kullanılmıştır.
+                model_version = "lucataco/sdxl-controlnet:06d6fae3a62866994a53e660ef093a8c62c2e557b4430e79147e4529a6742a"
+                
                 output = replicate.run(
-                    "lucataco/sdxl-controlnet:db21e45d3f051393749a435ad9998e75147348ca3ca30467a84594c736561110",
+                    model_version,
                     input={
                         "image": uploaded_file,
-                        "prompt": f"Professional architectural exterior shot, building facade, windows with white decorative {selected_code} style moldings, white stone material, sharp edges, high quality render",
-                        "negative_prompt": "deformed, blurry, low resolution, colorful, messy lines, bad architecture",
+                        "prompt": f"High quality architectural photography, a house facade, windows are decorated with white decorative {selected_code} style window moldings, white architectural details, sharp realistic shadows, 8k resolution",
+                        "negative_prompt": "blurry, low quality, messy, distorted windows, colors, cartoon, drawing",
                         "controlnet_conditioning_scale": 0.8,
-                        "canney_low_threshold": 100,
-                        "canney_high_threshold": 200,
                         "num_inference_steps": 30,
                         "guidance_scale": 7.5
                     }
                 )
 
                 if output:
-                    st.success("Tasarım Hazır!")
+                    st.success("✅ Tasarım Tamamlandı!")
                     res_url = output[0] if isinstance(output, list) else output
-                    st.image(res_url, caption="Lucataco AI Sonucu", use_container_width=True)
-                    st.download_button("Görseli İndir", requests.get(res_url).content, file_name=f"{selected_code}_sove.png")
+                    st.image(res_url, caption="AI Uygulama Sonucu", use_container_width=True)
+                    
+                    # İndirme Seçeneği
+                    img_data = requests.get(res_url).content
+                    st.download_button("📥 Sonucu İndir", data=img_data, file_name=f"{selected_code}_tasarim.png")
 
             except Exception as e:
-                st.error(f"Hata oluştu: {str(e)}")
-                # Eğer hala 422 verirse sebebi Token'ın bu modele izin vermemesidir
-                if "422" in str(e):
-                    st.warning("Lütfen Replicate sitesinde bu modeli bir kez 'Run' yaparak hesabınız için onaylayın.")
+                st.error(f"Bir hata oluştu: {str(e)}")
+                st.info("İpucu: Token'ı kopyalarken 'r8_' ile başladığından emin ol.")
+
+st.caption("Evimde Gör v9.2 PRO | Halit Telli")
