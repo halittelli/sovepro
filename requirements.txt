@@ -1,3 +1,7 @@
 streamlit
-replicate
-Pillow
+pillow
+torch
+torchvision
+torchaudio
+transformers
+accelerate
