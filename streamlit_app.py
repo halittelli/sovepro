@@ -6,82 +6,65 @@ import requests
 # --- SAYFA YAPILANDIRMASI ---
 st.set_page_config(page_title="Evimde Gör PRO", page_icon="🏠", layout="wide")
 
-# --- GÜVENLİK VE API AYARI (SIDEBAR) ---
 with st.sidebar:
     st.header("🔑 Pro Bağlantı")
-    replicate_api_token = st.text_input("Replicate API Token giriniz:", type="password")
+    # Önceki hatayı önlemek için input alanını temiz tutalım
+    replicate_api_token = st.text_input("Yeni Replicate API Token giriniz:", type="password")
     if replicate_api_token:
-        os.environ["REPLICATE_API_TOKEN"] = replicate_api_token
-        st.success("Bağlantı Başarılı!")
-    else:
-        st.warning("Lütfen Replicate API Token giriniz.")
+        os.environ["REPLICATE_API_TOKEN"] = replicate_api_token.strip() # Boşlukları otomatik siler
+        st.success("Yeni bağlantı kuruldu!")
 
-st.title("🏠 Evimde Gör: Akıllı Söve Katalog Sistemi")
-st.markdown("---")
+st.title("🏠 Evimde Gör: Profesyonel Söve Uygulaması")
 
 col1, col2 = st.columns([1, 1])
 
-# --- SOL SÜTUN: BİNA FOTOĞRAFI ---
 with col1:
     st.subheader("📸 Bina Fotoğrafı")
-    uploaded_file = st.file_uploader("Binanın fotoğrafını yükleyin", type=["jpg", "png", "jpeg"])
+    uploaded_file = st.file_uploader("Fotoğraf yükle", type=["jpg", "png", "jpeg"])
     if uploaded_file:
-        st.image(uploaded_file, caption="Uygulama Yapılacak Bina", use_container_width=True)
+        st.image(uploaded_file, use_container_width=True)
 
-# --- SAĞ SÜTUN: MODEL SEÇİMİ VE ÖN İZLEME ---
 with col2:
-    st.subheader("🛠️ Model Kütüphanesi")
+    st.subheader("🛠️ Model Seçimi")
     tc_codes = [f"TC{i:03d}" for i in range(1, 25)] 
-    selected_code = st.selectbox("Söve Modelini Seçin", tc_codes, index=0)
+    selected_code = st.selectbox("Söve Seçin", tc_codes)
     
-    # Kullanıcı adındaki 'halittelli' (çift t) kontrol edildi
+    # Kütüphane linkini halittelli olarak sabitledik
     preview_url = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{selected_code}.png"
-    
     try:
-        res = requests.get(preview_url, timeout=5)
-        if res.status_code == 200:
-            st.image(preview_url, caption=f"Model: {selected_code}", width=300)
-        else:
-            st.error(f"Görsel bulunamadı: {selected_code}")
-    except:
-        st.warning("Kütüphane bağlantı hatası.")
+        if requests.get(preview_url).status_code == 200:
+            st.image(preview_url, width=250)
+    except: pass
 
 st.markdown("---")
 
-# --- PRO İŞLEMCİ: EN STABİL MODEL (422 HATASINI ÖNLEYEN YAPI) ---
-if st.button("🚀 Söveyi Binaya Giydir", type="primary", use_container_width=True):
+if st.button("🚀 Söveyi Uygula", type="primary", use_container_width=True):
     if not uploaded_file or not replicate_api_token:
-        st.error("Lütfen önce bina fotoğrafı yükleyin ve API Token girin!")
+        st.error("Eksik bilgi!")
     else:
-        with st.spinner(f"AI Analiz Yapıyor: {selected_code} modeli binaya uyarlanıyor..."):
+        with st.spinner("AI İşlem Yapıyor..."):
             try:
-                # 422 HATASINI ÖNLEYEN RESMİ MODEL ADRESİ:
-                # 'replicate/controlnet-canny' her zaman en güncel versiyonu seçer.
+                # BU SEFER REPLICATE'İN RESMİ VE EN GÜNCEL SDXL-CANNY MODELİNİ KULLANIYORUZ
+                # Bu model 'official' olduğu için 422 hatası alma ihtimalimiz en düşüktür.
                 output = replicate.run(
-                    "fofr/sdxl-controlnet-canny:44ef130f1d120937a07502c342f534e626e2a225103c80e1a8a3a936a5360f04",
+                    "replicate/sdxl-controlnet-canny:da770d1033f9e8a7199416a246835be293526da25701a57e335532588b39447d",
                     input={
                         "image": uploaded_file,
-                        "prompt": f"Professional architectural photo of a building, white {selected_code} window moldings, detailed facade, realistic shadows, high resolution",
-                        "negative_prompt": "cartoon, blurry, low quality, distorted architecture, messy windows, colors",
-                        "condition_scale": 0.8,
-                        "num_inference_steps": 30,
-                        "guidance_scale": 7.5
+                        "prompt": f"Professional real estate photography of a building, white {selected_code} window moldings, sharp edges, architectural detail, white stone texture",
+                        "negative_prompt": "blurry, lowres, bad anatomy, worst quality, artifacts",
+                        "condition_scale": 0.85,
+                        "num_inference_steps": 30
                     }
                 )
 
                 if output:
-                    st.success("✅ Tasarım Başarıyla Oluşturuldu!")
-                    # Çıktı formatını kontrol ediyoruz
-                    result_url = output[0] if isinstance(output, list) else output
-                    st.image(result_url, caption=f"Sonuç: {selected_code} Uygulaması", use_container_width=True)
-                    
-                    # İndirme Butonu
-                    img_res = requests.get(result_url)
-                    st.download_button("📥 Sonucu Bilgisayara Kaydet", data=img_res.content, file_name=f"{selected_code}_uygulama.png")
+                    st.success("Başarılı!")
+                    res_url = output[0] if isinstance(output, list) else output
+                    st.image(res_url, use_container_width=True)
+                    st.download_button("Kaydet", requests.get(res_url).content, file_name="tasarim.png")
 
             except Exception as e:
-                st.error(f"Teknik bir hata oluştu: {str(e)}")
-                st.info("Eğer hata devam ederse, Token'ı Replicate panelinden 'Reset' yapıp yeni anahtarı deneyin.")
-
-st.divider()
-st.caption("Evimde Gör v8.9 PRO | Halit Telli")
+                # Hata mesajını tam olarak görelim
+                st.error(f"Hata Detayı: {str(e)}")
+                if "422" in str(e):
+                    st.warning("Hala 422 alıyorsan: Replicate web sitesinde bir kez bu modeli çalıştırıp şartları kabul etmelisin.")
