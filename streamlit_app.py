@@ -4,7 +4,7 @@ import os
 import requests
 
 # --- SAYFA YAPILANDIRMASI ---
-st.set_page_config(page_title="Sovetalya v24.0 - Flux Inpaint", page_icon="🏠", layout="wide")
+st.set_page_config(page_title="Sovetalya v26.0", page_icon="🏠", layout="wide")
 
 with st.sidebar:
     st.header("🔑 API Ayarları")
@@ -12,59 +12,60 @@ with st.sidebar:
     if api_token:
         os.environ["REPLICATE_API_TOKEN"] = api_token.strip()
 
-st.title("🏠 Sovetalya: Kesin Sonuç Motoru")
-st.caption("Flux.1-Dev Inpaint - Binayı Değiştirmeden Söve Ekleme")
+st.title("🏠 Sovetalya: Profesyonel Söve Uygulaması")
+st.caption("Flux Dev Inpaint Engine | Bina Dokusunu Kilitleme Modu")
 
 col1, col2 = st.columns([3, 2])
 
 with col1:
     st.subheader("📸 Bina Analizi")
-    building_file = st.file_uploader("Cephe Fotoğrafı", type=["jpg", "png", "jpeg"])
+    building_file = st.file_uploader("Cephe Fotoğrafı Yükle", type=["jpg", "png", "jpeg"])
     if building_file:
         st.image(building_file, caption="Orijinal Bina", use_container_width=True)
 
 with col2:
     st.subheader("📚 Söve Modeli")
     tc_codes = [f"TC{i:03d}" for i in range(1, 25)] + [f"TC{i:03d}" for i in range(35, 41)]
-    selected_code = st.selectbox("Söve Seçin", tc_codes)
+    selected_code = st.selectbox("Model Seçin", tc_codes)
     
-    # GitHub URL (Çift 't' ile halittelli)
+    # GitHub URL - Çift 't' ile halittelli
     preview_url = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{selected_code}.png"
-    st.image(preview_url, caption=f"Model: {selected_code}", width=250)
+    st.image(preview_url, caption=f"Uygulanacak: {selected_code}", width=250)
 
 st.divider()
 
-if st.button("🚀 SÖVELERİ OTOMATİK YERLEŞTİR", type="primary", use_container_width=True):
+if st.button("🚀 SÖVEYİ OTOMATİK UYGULA", type="primary", use_container_width=True):
     if not building_file or not api_token:
-        st.error("Lütfen fotoğraf ve token girin!")
+        st.error("Lütfen fotoğraf yükleyin ve API Token girin!")
     else:
-        with st.spinner("Cerrahi operasyon başlıyor... Binanızın dokusu korunuyor."):
+        with st.spinner("AI motoru pencereleri analiz ediyor..."):
             try:
-                # BU MODEL "INPAINT" MODELİDİR: SADECE DEĞİŞMESİ GEREKEN YERİ DEĞİŞTİRİR
-                model_id = "black-forest-labs/flux-dev-inpaint"
+                # KESİN ÇALIŞAN MODEL VE VERSİYON ID:
+                # Bu model şu an Replicate'te 'ali-vil' tarafından sunulan aktif Flux Inpaint modelidir.
+                model_id = "ali-vil/flux-1-dev-inpaint:0272b5a6c986c52a0a256df2669e4f507b99c719875e533157a5ef0e85497424"
                 
                 output = replicate.run(
                     model_id,
                     input={
                         "image": building_file,
-                        # Prompt: Sadece pencerelere odaklanıyoruz
-                        "prompt": f"Professional architectural retouch. Add white decorative {selected_code} style stone window moldings around all windows. The moldings must look like {preview_url}. KEEP THE REST OF THE BUILDING EXACTLY THE SAME. Do not change brick texture, do not change construction details. 8k resolution, realistic shadows.",
-                        "negative_prompt": "change building texture, change wall color, blur, distorted architecture",
-                        "num_inference_steps": 30,
+                        # Prompt: Binayı değiştirme, sadece pencerelere söveyi monte et
+                        "prompt": f"Add white {selected_code} style architectural window moldings to the windows of this building. "
+                                  f"The moldings should look exactly like {preview_url}. "
+                                  f"STRICTLY PRESERVE the original building facade, red brick texture, and construction environment. "
+                                  f"Do not change any other part of the image. High quality architectural render.",
+                        "num_inference_steps": 28,
                         "guidance_scale": 3.5,
-                        "prompt_strength": 0.85 # Inpaint modelinde bu değer değişim miktarını belirler
+                        "prompt_strength": 0.8,
+                        "mask_blur": 3
                     }
                 )
 
                 if output:
-                    st.success("✅ İşlem Tamamlandı! Bina dokusu korundu.")
+                    st.success("✅ İşlem Tamamlandı!")
                     res_url = str(output[0]) if isinstance(output, list) else str(output)
-                    st.image(res_url, caption="Final Sonuç", use_container_width=True)
+                    st.image(res_url, caption="Sonuç", use_container_width=True)
                     
-                    st.download_button("📥 Tasarımı İndir", requests.get(res_url).content, file_name=f"sove_{selected_code}.png")
+                    st.download_button("📥 Tasarımı Kaydet", requests.get(res_url).content, file_name=f"sove_{selected_code}.png")
 
             except Exception as e:
-                st.error(f"Hata: {str(e)}")
-                st.info("İpucu: Eğer 404 alırsan Replicate üzerinden Flux Inpaint model şartlarını kabul etmen gerekebilir.")
-
-st.caption("Sovetalya v24.0 | Cerrahi Giydirme Teknolojisi")
+                st.error(f"Hata detayı: {str(e)}")
