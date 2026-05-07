@@ -3,8 +3,8 @@ import replicate
 import os
 import requests
 
-# --- SAYFA YAPILANDIRMASI ---
-st.set_page_config(page_title="Sovetalya v39.0 - TC007 Canlı Test", page_icon="🏠", layout="wide")
+# --- SAYFA AYARLARI ---
+st.set_page_config(page_title="Sovetalya v40.0 - Grok Engine", page_icon="🏠", layout="wide")
 
 with st.sidebar:
     st.header("🔑 API Kontrol")
@@ -12,67 +12,55 @@ with st.sidebar:
     if api_token:
         os.environ["REPLICATE_API_TOKEN"] = api_token.strip()
 
-st.title("🏠 Sovetalya: TC007 Entegrasyonu")
-st.caption("Doğrulanmış Imgur Linki ile Geometrik Analiz")
+st.title("🏠 Sovetalya: TC007 Görsel Entegrasyon")
+st.caption("Yapısal Analiz ve Şekil Projeksiyonu (Kesin Uygulama)")
 
 col1, col2 = st.columns([3, 2])
 
 with col1:
-    st.subheader("📸 Bina Fotoğrafı")
-    building_file = st.file_uploader("Cephe fotoğrafını yükle", type=["jpg", "png", "jpeg"])
+    st.subheader("📸 Hedef Bina")
+    building_file = st.file_uploader("Bina fotoğrafını yükle", type=["jpg", "png", "jpeg"])
     if building_file:
-        st.image(building_file, caption="Uygulama Yapılacak Bina", use_container_width=True)
+        st.image(building_file, caption="İskeleti Korunacak Yapı", use_container_width=True)
 
 with col2:
-    st.subheader("📚 Referans Söve: TC007")
-    # SENİN GÖNDERDİĞİN LİNKİN DOĞRUDAN RESİM FORMATI:
+    st.subheader("📚 Söve Referansı (TC007)")
+    # Doğrulanmış Imgur Ham Linki
     tc007_link = "https://i.imgur.com/Ukv1Wot.png"
-    
-    st.image(tc007_link, caption="AI'nın Şeklini Alacağı Model (TC007)", width=300)
-    st.info("Bu link artık aktif. AI resimdeki kavisli profili ve 3D derinliği analiz edecek.")
+    st.image(tc007_link, caption="Şekli Kopyalanacak Model", width=250)
 
 st.divider()
 
-if st.button("🚀 TC007 MODELİNİ PENCERELERE UYGULA", type="primary", use_container_width=True):
+if st.button("🚀 SÖVEYİ BİNAYA MONTE ET", type="primary", use_container_width=True):
     if not building_file or not api_token:
         st.error("Lütfen fotoğraf yükleyin ve API Token girin!")
     else:
-        with st.spinner("Grok mantığıyla pencereler taranıyor ve söve giydiriliyor..."):
+        with st.spinner("Grok Algoritması: Bina hatları kilitleniyor ve söve profili işleniyor..."):
             try:
-                # 422/404 HATASI VERMEYEN EN STABİL MODEL (Flux-Dev)
-                model_id = "black-forest-labs/flux-dev"
+                # Bu model binanın iskeletini (Canny) çıkarır ve söveyi üzerine 'basar'
+                model_id = "lucataco/flux-dev-controlnet-canny:7077759d571871f308ce387063063f272c724771239066601445903b44b82d3e"
                 
-                # GROK MANTIĞI: Linki prompt'un kalbine, 'Image Reference' olarak gömüyoruz.
-                grok_style_prompt = (
-                    f"A high-end architectural photo edit. "
-                    f"Identify all existing window frames in the building photo. "
-                    f"Precisely wrap white decorative stone moldings around these windows. "
-                    f"The molding profile MUST match the 3D double-bullnose shape from this reference: {tc007_link}. "
-                    f"CRITICAL: Do not change the red brick wall texture, scaffolding, or light. "
-                    f"The result must show the white moldings integrated perfectly with realistic shadows."
-                )
-
                 output = replicate.run(
                     model_id,
                     input={
                         "image": building_file,
-                        "prompt": grok_style_prompt,
-                        "guidance_scale": 3.5,
+                        "control_image": building_file, # Binanın tuğlalarını ve hatlarını korumak için
+                        "prompt": f"Architectural photo. Add white stone moldings with the exact profile of {tc007_link} around every window. The moldings must have a 3D double-bullnose shape. KEEP the original brick wall and scaffolding 100% same. Realistic shadows and sunlight.",
+                        "control_strength": 0.7, # Binayı koruma gücü (Yüksek)
                         "num_inference_steps": 30,
-                        # Bina dokusunu koruyan 'Altın Oran'
-                        "prompt_strength": 0.35, 
-                        "extra_lora_scale": 1.0
+                        "guidance_scale": 4.5
                     }
                 )
 
                 if output:
-                    st.success("✅ İşlem Tamamlandı!")
+                    st.success("✅ Uygulama Tamamlandı!")
                     res_url = str(output[0]) if isinstance(output, list) else str(output)
-                    st.image(res_url, caption="Final Uygulama Sonucu", use_container_width=True)
+                    st.image(res_url, caption="Final Render Sonucu", use_container_width=True)
                     
-                    st.download_button("📥 Tasarımı Kaydet", requests.get(res_url).content, file_name="sove_test.png")
+                    st.download_button("📥 Kaydet", requests.get(res_url).content, file_name="sovetalya_final.png")
 
             except Exception as e:
                 st.error(f"Hata detayı: {str(e)}")
+                st.info("Eğer 422 hatası alırsanız, bu modelin 'public' sürümünü kullanacak alternatif bir köprü kuracağım.")
 
-st.caption("Sovetalya v39.0 | Antalya | Halit Telli")
+st.caption("Sovetalya v40.0 | Antalya | Halit Telli")
