@@ -2,78 +2,72 @@ import streamlit as st
 import replicate
 import os
 import requests
+from io import BytesIO
 
-# --- SAYFA YAPILANDIRMASI ---
-st.set_page_config(page_title="Evimde Gör PRO", page_icon="🏠", layout="wide")
+# Sayfa Ayarı
+st.set_page_config(page_title="Sovetalya Tanı Modülü", layout="wide")
 
 with st.sidebar:
-    st.header("🔑 Replicate Yetkilendirme")
-    api_token = st.text_input("API Token girin:", type="password")
-    if api_token:
-        # Görünmez boşlukları temizleyerek hata riskini sıfıra indiriyoruz
-        os.environ["REPLICATE_API_TOKEN"] = api_token.strip()
-        st.success("API Bağlantısı Aktif!")
+    st.header("🔑 API Kontrol")
+    token = st.text_input("Replicate Token (r8_ ile başlamalı):", type="password")
+    if token:
+        os.environ["REPLICATE_API_TOKEN"] = token.strip()
 
-st.title("🏠 Evimde Gör: Akıllı Söve Uygulaması")
-st.markdown("---")
+st.title("🏠 Sovetalya: Hata Ayıklama ve Uygulama")
 
-col1, col2 = st.columns([1, 1])
+col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("📸 Bina Fotoğrafı")
-    uploaded_file = st.file_uploader("Cephe fotoğrafını yükle", type=["jpg", "png", "jpeg"])
+    uploaded_file = st.file_uploader("Bina Fotoğrafı Seç", type=["jpg", "jpeg", "png"])
     if uploaded_file:
-        st.image(uploaded_file, caption="Orijinal Bina", use_container_width=True)
+        st.image(uploaded_file, caption="Yüklenen Dosya", use_container_width=True)
 
 with col2:
-    st.subheader("🛠️ Söve Seçimi")
-    tc_codes = [f"TC{i:03d}" for i in range(1, 25)] 
-    selected_code = st.selectbox("Model Seçin", tc_codes)
-    
-    # Katalog Ön İzleme (halittelli - çift t)
-    preview_url = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{selected_code}.png"
-    try:
-        res = requests.get(preview_url, timeout=5)
-        if res.status_code == 200:
-            st.image(preview_url, caption=f"Katalog: {selected_code}", width=280)
-    except:
-        st.warning("Katalog görseli yüklenemedi.")
+    tc_codes = [f"TC{i:03d}" for i in range(1, 25)]
+    model_choice = st.selectbox("Söve Modeli", tc_codes)
+    # GitHub'dan görsel çekme (halittelli - çift t)
+    preview_url = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{model_choice}.png"
+    st.image(preview_url, width=200)
 
-st.markdown("---")
+st.divider()
 
-if st.button("🚀 Söveyi Binaya Uygula", type="primary", use_container_width=True):
-    if not uploaded_file or not api_token:
-        st.error("Lütfen fotoğraf yükleyin ve API Token girin!")
+if st.button("🚀 AI Motorunu Test Et ve Uygula"):
+    if not uploaded_file or not token:
+        st.error("Lütfen fotoğraf ve token bilgilerini girin.")
     else:
-        with st.spinner(f"AI Motoru Çalışıyor: {selected_code} pencerelere giydiriliyor..."):
+        with st.spinner("Sistem analiz ediliyor..."):
             try:
-                # EKRAN GÖRÜNTÜSÜNDEKİ 'LATEST' (EN GÜNCEL) VERSİYON KODU:
-                # '06d6fae3...' ile başlayan tam ID kullanılmıştır.
-                model_version = "lucataco/sdxl-controlnet:06d6fae3a62866994a53e660ef093a8c62c2e557b4430e79147e4529a6742a"
+                # STRATEJİ: Dosyayı Bytes olarak oku (En güvenli yol)
+                file_bytes = uploaded_file.getvalue()
+                
+                # REPLICATE RESMİ SDXL-CANNY (Versiyon kodu içermeyen en stabil yol)
+                # Bu çağırma yöntemi her zaman en güncel çalışan versiyona gider.
+                model_name = "lucataco/sdxl-controlnet"
                 
                 output = replicate.run(
-                    model_version,
+                    model_name,
                     input={
-                        "image": uploaded_file,
-                        "prompt": f"High quality architectural photography, a house facade, windows are decorated with white decorative {selected_code} style window moldings, white architectural details, sharp realistic shadows, 8k resolution",
-                        "negative_prompt": "blurry, low quality, messy, distorted windows, colors, cartoon, drawing",
+                        "image": BytesIO(file_bytes), # Dosyayı ham haliyle gönderiyoruz
+                        "prompt": f"Professional architectural exterior, house facade, windows with white {model_choice} moldings, realistic white stone, photorealistic, 8k",
+                        "negative_prompt": "cartoon, blur, low quality, distorted, messy",
                         "controlnet_conditioning_scale": 0.8,
-                        "num_inference_steps": 30,
+                        "num_inference_steps": 25,
                         "guidance_scale": 7.5
                     }
                 )
 
                 if output:
-                    st.success("✅ Tasarım Tamamlandı!")
-                    res_url = output[0] if isinstance(output, list) else output
-                    st.image(res_url, caption="AI Uygulama Sonucu", use_container_width=True)
-                    
-                    # İndirme Seçeneği
-                    img_data = requests.get(res_url).content
-                    st.download_button("📥 Sonucu İndir", data=img_data, file_name=f"{selected_code}_tasarim.png")
-
+                    st.success("BAŞARILI!")
+                    st.image(output[0] if isinstance(output, list) else output)
+            
             except Exception as e:
-                st.error(f"Bir hata oluştu: {str(e)}")
-                st.info("İpucu: Token'ı kopyalarken 'r8_' ile başladığından emin ol.")
+                # Hata 422 ise, detaylarını parçalayarak gösterelim
+                st.error("⚠️ KRİTİK HATA TESPİT EDİLDİ")
+                st.write(f"Hata Mesajı: {str(e)}")
+                
+                # Teknik Detay Analizi
+                if "422" in str(e):
+                    st.info("Teşhis: Gönderilen parametrelerden biri (image, prompt vb.) model tarafından reddedildi.")
+                    st.warning("Çözüm Önerisi: Replicate panelinden 'API' sekmesine bakıp, parametre isimlerinin değişip değişmediğini kontrol ediyoruz.")
 
-st.caption("Evimde Gör v9.2 PRO | Halit Telli")
+st.caption("Sovetalya v11.0 | Halit Telli")
