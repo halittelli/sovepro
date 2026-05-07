@@ -2,8 +2,6 @@ import streamlit as st
 import replicate
 import os
 import requests
-from PIL import Image
-from io import BytesIO
 
 # --- SAYFA YAPILANDIRMASI ---
 st.set_page_config(page_title="Evimde Gör PRO", page_icon="🏠", layout="wide")
@@ -39,23 +37,24 @@ with col2:
     
     st.markdown(f"**Seçilen Model:** `{selected_code}`")
     
-    # GITHUB ÖN İZLEME MANTIĞI
-    # Önce küçük harf .png deniyoruz
-    preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
+    # DÜZELTİLMİŞ GITHUB URL (halittelli - ÇİFT T İLE)
+    preview_url = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{selected_code}.png"
     headers = {"User-Agent": "Mozilla/5.0"}
     
     try:
-        response = requests.get(preview_url, headers=headers)
-        # Bulunamazsa büyük harf .PNG deniyoruz
-        if response.status_code != 200:
-            preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.PNG"
-            response = requests.get(preview_url, headers=headers)
-
+        response = requests.get(preview_url, headers=headers, timeout=10)
+        
         if response.status_code == 200:
             st.image(preview_url, caption=f"{selected_code} Kesit Görünümü", width=300)
         else:
-            st.error(f"⚠️ {selected_code} görseli bulunamadı. (GitHub 404)")
-            st.info("Lütfen GitHub'daki dosya adını ve uzantısını kontrol edin.")
+            # Eğer küçük .png olmazsa büyük .PNG dene
+            preview_url_upper = f"https://raw.githubusercontent.com/halittelli/sovepro/main/{selected_code}.PNG"
+            response_upper = requests.get(preview_url_upper, headers=headers)
+            if response_upper.status_code == 200:
+                st.image(preview_url_upper, caption=f"{selected_code} Kesit Görünümü", width=300)
+            else:
+                st.error(f"⚠️ {selected_code} görseli bulunamadı.")
+                st.write(f"Denenen adres: {preview_url}")
     except Exception as e:
         st.warning(f"Bağlantı sorunu: {e}")
 
@@ -66,9 +65,9 @@ if st.button("🚀 Söveyi Binaya Giydir", type="primary", use_container_width=T
     if not uploaded_file or not replicate_api_token:
         st.error("Lütfen önce fotoğraf yükleyin ve API Token girin!")
     else:
-        with st.spinner(f"AI Analiz Yapıyor: {selected_code} modeli binaya uyarlanıyor..."):
+        with st.spinner(f"AI Analiz Yapıyor: {selected_code} modeli uygulanıyor..."):
             try:
-                # Replicate Resmi SDXL Canny Modeli (En stabil versiyon)
+                # Replicate Resmi SDXL Canny Modeli
                 model_name = "replicate/sdxl-controlnet-canny:da770d1033f9e8a7199416a246835be293526da25701a57e335532588b39447d"
                 
                 # AI Talimatı
@@ -78,7 +77,6 @@ if st.button("🚀 Söveyi Binaya Giydir", type="primary", use_container_width=T
                 
                 negative_prompt = "cartoon, anime, drawing, low quality, distorted windows, messy facade, colorful frames"
 
-                # Replicate İşlemi
                 output = replicate.run(
                     model_name,
                     input={
@@ -96,7 +94,6 @@ if st.button("🚀 Söveyi Binaya Giydir", type="primary", use_container_width=T
                     result_url = output[0] if isinstance(output, list) else output
                     st.image(result_url, caption=f"Sonuç: {selected_code} Uygulaması", use_container_width=True)
                     
-                    # İndirme Butonu
                     img_res = requests.get(result_url)
                     st.download_button("📥 Tasarımı Bilgisayara Kaydet", data=img_res.content, file_name=f"{selected_code}_tasarim.png")
 
@@ -104,4 +101,4 @@ if st.button("🚀 Söveyi Binaya Giydir", type="primary", use_container_width=T
                 st.error(f"Yapay zeka motorunda bir hata oluştu: {str(e)}")
 
 st.divider()
-st.caption("Evimde Gör v8.4 PRO | Halit Telli Architectural Visualization")
+st.caption("Evimde Gör v8.5 PRO | Halit Telli")
