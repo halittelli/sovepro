@@ -1,7 +1,3 @@
 streamlit
+requests
 pillow
-torch
-torchvision
-torchaudio
-transformers
-accelerate
