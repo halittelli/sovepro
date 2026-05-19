@@ -3,7 +3,7 @@ import requests
 import base64
 import time
 
-VERSION = "v1.6 - FLUX Kontext Pro (Düzeltilmiş)"
+VERSION = "v1.6 - FLUX Kontext Pro (Output Fix)"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 
@@ -42,11 +42,10 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                Apply the exact {selected_code} Sovetalya XPS decorative window molding to ALL windows and balcony doors on this building.
-                Maintain perfect perspective, realistic lighting, shadows, and glass reflections.
-                Seamless blending, must look like real physical product installed. 
-                Do not change anything else on the building or its surroundings.
-                High quality professional architectural rendering.
+                Apply the exact {selected_code} Sovetalya XPS decorative window molding to ALL windows and balcony doors.
+                Perfect perspective, realistic lighting, shadows, glass reflections, seamless blending.
+                Must look like real installed product. Do not change anything else on the building.
+                Professional architectural rendering quality.
                 """
 
                 response = requests.post(
@@ -61,17 +60,13 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
                             "prompt": prompt.strip(),
                             "image": f"data:image/jpeg;base64,{building_b64}",
                             "num_outputs": 1,
-                            "aspect_ratio": "match_input_image"   # ← Düzeltilen kısım
+                            "aspect_ratio": "match_input_image"
                         }
                     }
                 )
 
-                if response.status_code == 429:
-                    st.warning("Rate limit. 5-10 saniye bekleyip tekrar deneyin.")
-                    st.stop()
-
                 if response.status_code != 201:
-                    st.error("Hata oluştu")
+                    st.error("Prediction başlatılamadı")
                     st.json(response.json())
                     st.stop()
 
@@ -88,18 +83,33 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
                     status = data.get("status")
 
                     if status == "succeeded":
-                        output_url = data["output"][0]
-                        img_data = requests.get(output_url).content
-                        st.success("✅ FLUX Kontext Pro ile başarıyla tamamlandı!")
-                        st.image(img_data, caption="Sonuç", use_container_width=True)
-                        st.download_button("📥 Sonucu İndir", img_data, f"sove_{selected_code}_flux.jpg", "image/jpeg")
+                        # Output URL'sini güvenli şekilde al
+                        output = data.get("output")
+                        if isinstance(output, list) and len(output) > 0:
+                            output_url = output[0]
+                        elif isinstance(output, str):
+                            output_url = output
+                        else:
+                            st.error("Output URL bulunamadı")
+                            st.json(data)
+                            st.stop()
+
+                        if output_url and output_url.startswith("http"):
+                            img_data = requests.get(output_url).content
+                            st.success("✅ FLUX Kontext Pro ile tamamlandı!")
+                            st.image(img_data, caption="Sonuç", use_container_width=True)
+                            st.download_button("📥 Sonucu İndir", img_data, f"sove_{selected_code}_flux.jpg", "image/jpeg")
+                        else:
+                            st.error("Geçersiz URL alındı")
+                            st.json(data)
                         break
+
                     elif status in ["failed", "canceled"]:
-                        st.error("İşlem başarısız oldu")
+                        st.error("İşlem başarısız")
                         st.json(data)
                         break
                     else:
-                        st.info(f"İşleniyor... ({status})")
+                        st.info(f"Durum: {status}...")
 
             except Exception as e:
                 st.error(f"Genel Hata: {str(e)}")
