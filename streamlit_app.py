@@ -3,12 +3,12 @@ import requests
 import base64
 import time
 
-VERSION = "v1.7 - FLUX Kontext Pro (Fix + Katı Koruma)"
+VERSION = "v1.8 - FLUX Kontext Pro (Ultra Katı Koruma)"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 
 st.title("🏠 Söve Oturucu Pro - FLUX.1 Kontext Pro")
-st.caption(f"**Versiyon:** {VERSION}")
+st.caption(f"**Versiyon:** {VERSION} | Ultra Koruma Modu")
 
 with st.sidebar:
     st.header("🔑 Replicate API Key")
@@ -27,14 +27,11 @@ with col2:
     tc_codes = [f"TC{i:03d}" for i in range(1, 25)] + [f"TC{i:03d}" for i in range(35, 41)]
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
     
-    # Ön izleme URL'si (Düzeltilmiş)
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
-    
     try:
         st.image(preview_url, caption=f"{selected_code} - Sovetalya Söve", use_container_width=True)
     except:
-        st.warning(f"⚠️ {selected_code}.png önizlemesi yüklenemedi.")
-        st.info("Dosya GitHub'da mevcut ama bazen cache sorunu olabiliyor.")
+        st.warning(f"{selected_code}.png önizlemesi yüklenemedi.")
 
 if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_container_width=True):
     if not building_file:
@@ -42,29 +39,27 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
     elif not replicate_key:
         st.error("❌ Replicate API Key girin!")
     else:
-        with st.spinner("FLUX Kontext Pro çalışıyor..."):
+        with st.spinner("FLUX çalışıyor..."):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                You are an expert architectural editor.
+                This is a precise architectural photo editing task.
 
-                Task: ONLY add the {selected_code} Sovetalya XPS decorative window molding to ALL windows and balcony doors.
-                - Keep the building, walls, roof, windows frames, textures, lighting, shadows, and all other details EXACTLY the same.
-                - Do not change the architecture, style, color, or any element except adding the molding.
-                - Perfect perspective match, realistic lighting, shadows, and glass reflections.
-                - The moldings must look like real physical installed product with seamless blending.
+                STRICT RULES:
+                - ONLY add {selected_code} Sovetalya XPS window molding to ALL existing windows and balcony doors.
+                - Do NOT change the building's architecture, shape, materials, color, texture, lighting, background, or any other element.
+                - Keep the exact same building structure, windows positions, and proportions.
+                - The new moldings must blend seamlessly as if they were physically installed.
+                - Photorealistic, professional architectural edit.
 
-                Extremely important: Preserve the original image structure 100%.
+                Do not generate a new building. Edit the existing image only on the window frames.
                 """
 
                 response = requests.post(
                     "https://api.replicate.com/v1/predictions",
-                    headers={
-                        "Authorization": f"Token {replicate_key}",
-                        "Content-Type": "application/json"
-                    },
+                    headers={"Authorization": f"Token {replicate_key}", "Content-Type": "application/json"},
                     json={
                         "version": "black-forest-labs/flux-kontext-pro",
                         "input": {
@@ -76,44 +71,26 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
                     }
                 )
 
-                if response.status_code != 201:
-                    st.error("Prediction başlatılamadı")
-                    st.json(response.json())
-                    st.stop()
-
                 pred_id = response.json()["id"]
 
-                for i in range(60):
+                for _ in range(60):
                     time.sleep(3)
-                    r = requests.get(
+                    data = requests.get(
                         f"https://api.replicate.com/v1/predictions/{pred_id}",
                         headers={"Authorization": f"Token {replicate_key}"}
-                    )
-                    data = r.json()
-                    status = data.get("status")
+                    ).json()
 
-                    if status == "succeeded":
-                        output = data.get("output")
-                        output_url = output[0] if isinstance(output, list) else output
-                        
-                        if output_url and str(output_url).startswith("http"):
-                            img_data = requests.get(output_url).content
-                            st.success("✅ Tamamlandı!")
-                            st.image(img_data, caption="Sonuç", use_container_width=True)
-                            st.download_button("📥 Sonucu İndir", img_data, f"sove_{selected_code}.jpg", "image/jpeg")
-                        else:
-                            st.error("Sonuç URL'si alınamadı")
-                            st.json(data)
+                    if data.get("status") == "succeeded":
+                        output_url = data["output"][0]
+                        img_data = requests.get(output_url).content
+                        st.success("✅ Tamamlandı!")
+                        st.image(img_data, caption="Sonuç", use_container_width=True)
+                        st.download_button("📥 İndir", img_data, f"sove_{selected_code}.jpg", "image/jpeg")
                         break
-
-                    elif status in ["failed", "canceled"]:
-                        st.error("İşlem başarısız oldu")
+                    elif data.get("status") in ["failed", "canceled"]:
+                        st.error("Başarısız")
                         st.json(data)
                         break
-                    else:
-                        st.info(f"İşleniyor... ({status})")
 
             except Exception as e:
-                st.error(f"Genel Hata: {str(e)}")
-
-st.caption(f"**Versiyon:** {VERSION}")
+                st.error(f"Hata: {str(e)}")
