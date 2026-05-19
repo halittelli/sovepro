@@ -3,12 +3,12 @@ import requests
 import base64
 import time
 
-VERSION = "v1.6 - FLUX Kontext Pro Edition - 19 Mayıs 2026"
+VERSION = "v1.6 - FLUX Kontext Pro (Düzeltilmiş)"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 
 st.title("🏠 Söve Oturucu Pro - FLUX.1 Kontext Pro")
-st.caption(f"**Versiyon:** {VERSION} | Replicate'teki En Güçlü Editing Modeli")
+st.caption(f"**Versiyon:** {VERSION}")
 
 with st.sidebar:
     st.header("🔑 Replicate API Key")
@@ -36,16 +36,17 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
     elif not replicate_key:
         st.error("❌ Replicate API Key girin!")
     else:
-        with st.spinner("FLUX Kontext Pro çalışıyor... (Genellikle 8-20 saniye)"):
+        with st.spinner("FLUX Kontext Pro çalışıyor..."):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                Add the exact {selected_code} Sovetalya XPS decorative window molding to ALL windows and balcony doors on this building.
-                Perfect perspective match, realistic lighting, shadows, glass reflections and seamless blending.
-                The moldings must look like the original physical product. Do not change anything else on the building.
-                Professional architectural visualization quality.
+                Apply the exact {selected_code} Sovetalya XPS decorative window molding to ALL windows and balcony doors on this building.
+                Maintain perfect perspective, realistic lighting, shadows, and glass reflections.
+                Seamless blending, must look like real physical product installed. 
+                Do not change anything else on the building or its surroundings.
+                High quality professional architectural rendering.
                 """
 
                 response = requests.post(
@@ -55,27 +56,30 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
                         "Content-Type": "application/json"
                     },
                     json={
-                        "version": "black-forest-labs/flux-kontext-pro",   # En güçlü versiyon
+                        "version": "black-forest-labs/flux-kontext-pro",
                         "input": {
                             "prompt": prompt.strip(),
                             "image": f"data:image/jpeg;base64,{building_b64}",
                             "num_outputs": 1,
-                            "aspect_ratio": "original"
+                            "aspect_ratio": "match_input_image"   # ← Düzeltilen kısım
                         }
                     }
                 )
 
+                if response.status_code == 429:
+                    st.warning("Rate limit. 5-10 saniye bekleyip tekrar deneyin.")
+                    st.stop()
+
                 if response.status_code != 201:
-                    st.error("Başlatılamadı")
+                    st.error("Hata oluştu")
                     st.json(response.json())
                     st.stop()
 
-                pred = response.json()
-                pred_id = pred["id"]
+                pred_id = response.json()["id"]
 
                 # Polling
-                for _ in range(40):
-                    time.sleep(2.5)
+                for i in range(60):
+                    time.sleep(3)
                     r = requests.get(
                         f"https://api.replicate.com/v1/predictions/{pred_id}",
                         headers={"Authorization": f"Token {replicate_key}"}
@@ -86,16 +90,18 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
                     if status == "succeeded":
                         output_url = data["output"][0]
                         img_data = requests.get(output_url).content
-                        st.success("✅ FLUX Kontext Pro ile tamamlandı!")
+                        st.success("✅ FLUX Kontext Pro ile başarıyla tamamlandı!")
                         st.image(img_data, caption="Sonuç", use_container_width=True)
-                        st.download_button("📥 İndir", img_data, f"sove_{selected_code}_flux.jpg", "image/jpeg")
+                        st.download_button("📥 Sonucu İndir", img_data, f"sove_{selected_code}_flux.jpg", "image/jpeg")
                         break
                     elif status in ["failed", "canceled"]:
                         st.error("İşlem başarısız oldu")
                         st.json(data)
                         break
-                else:
-                    st.warning("Çok uzun sürdü, tekrar deneyin.")
+                    else:
+                        st.info(f"İşleniyor... ({status})")
 
             except Exception as e:
-                st.error(f"Hata: {str(e)}")
+                st.error(f"Genel Hata: {str(e)}")
+
+st.caption(f"**Versiyon:** {VERSION}")
