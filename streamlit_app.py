@@ -3,7 +3,7 @@ import requests
 import base64
 import time
 
-VERSION = "v1.6 - FLUX Kontext Pro (Output Fix)"
+VERSION = "v1.7 - FLUX Kontext Pro (Fix + Katı Koruma)"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 
@@ -27,8 +27,14 @@ with col2:
     tc_codes = [f"TC{i:03d}" for i in range(1, 25)] + [f"TC{i:03d}" for i in range(35, 41)]
     selected_code = st.selectbox("Söve Kodunu Seçin", tc_codes)
     
+    # Ön izleme URL'si (Düzeltilmiş)
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
-    st.image(preview_url, caption=f"{selected_code} - Sovetalya Söve", use_container_width=True)
+    
+    try:
+        st.image(preview_url, caption=f"{selected_code} - Sovetalya Söve", use_container_width=True)
+    except:
+        st.warning(f"⚠️ {selected_code}.png önizlemesi yüklenemedi.")
+        st.info("Dosya GitHub'da mevcut ama bazen cache sorunu olabiliyor.")
 
 if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_container_width=True):
     if not building_file:
@@ -42,10 +48,15 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                Apply the exact {selected_code} Sovetalya XPS decorative window molding to ALL windows and balcony doors.
-                Perfect perspective, realistic lighting, shadows, glass reflections, seamless blending.
-                Must look like real installed product. Do not change anything else on the building.
-                Professional architectural rendering quality.
+                You are an expert architectural editor.
+
+                Task: ONLY add the {selected_code} Sovetalya XPS decorative window molding to ALL windows and balcony doors.
+                - Keep the building, walls, roof, windows frames, textures, lighting, shadows, and all other details EXACTLY the same.
+                - Do not change the architecture, style, color, or any element except adding the molding.
+                - Perfect perspective match, realistic lighting, shadows, and glass reflections.
+                - The moldings must look like real physical installed product with seamless blending.
+
+                Extremely important: Preserve the original image structure 100%.
                 """
 
                 response = requests.post(
@@ -72,7 +83,6 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
 
                 pred_id = response.json()["id"]
 
-                # Polling
                 for i in range(60):
                     time.sleep(3)
                     r = requests.get(
@@ -83,33 +93,25 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
                     status = data.get("status")
 
                     if status == "succeeded":
-                        # Output URL'sini güvenli şekilde al
                         output = data.get("output")
-                        if isinstance(output, list) and len(output) > 0:
-                            output_url = output[0]
-                        elif isinstance(output, str):
-                            output_url = output
-                        else:
-                            st.error("Output URL bulunamadı")
-                            st.json(data)
-                            st.stop()
-
-                        if output_url and output_url.startswith("http"):
+                        output_url = output[0] if isinstance(output, list) else output
+                        
+                        if output_url and str(output_url).startswith("http"):
                             img_data = requests.get(output_url).content
-                            st.success("✅ FLUX Kontext Pro ile tamamlandı!")
+                            st.success("✅ Tamamlandı!")
                             st.image(img_data, caption="Sonuç", use_container_width=True)
-                            st.download_button("📥 Sonucu İndir", img_data, f"sove_{selected_code}_flux.jpg", "image/jpeg")
+                            st.download_button("📥 Sonucu İndir", img_data, f"sove_{selected_code}.jpg", "image/jpeg")
                         else:
-                            st.error("Geçersiz URL alındı")
+                            st.error("Sonuç URL'si alınamadı")
                             st.json(data)
                         break
 
                     elif status in ["failed", "canceled"]:
-                        st.error("İşlem başarısız")
+                        st.error("İşlem başarısız oldu")
                         st.json(data)
                         break
                     else:
-                        st.info(f"Durum: {status}...")
+                        st.info(f"İşleniyor... ({status})")
 
             except Exception as e:
                 st.error(f"Genel Hata: {str(e)}")
