@@ -2,19 +2,17 @@ import streamlit as st
 import requests
 import base64
 import time
-from PIL import Image
 
-VERSION = "v1.5 - Nano Banana 2 Polling Edition - 19 Mayıs 2026"
+VERSION = "v1.6 - FLUX Kontext Pro Edition - 19 Mayıs 2026"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 
-st.title("🏠 Söve Oturucu Pro - Nano Banana 2")
-st.caption(f"**Versiyon:** {VERSION}")
+st.title("🏠 Söve Oturucu Pro - FLUX.1 Kontext Pro")
+st.caption(f"**Versiyon:** {VERSION} | Replicate'teki En Güçlü Editing Modeli")
 
 with st.sidebar:
     st.header("🔑 Replicate API Key")
-    replicate_api_key = st.text_input("Replicate API Key", type="password", 
-                                      help="replicate.com/account/api-tokens")
+    replicate_key = st.text_input("Replicate API Key", type="password")
 
 col1, col2 = st.columns([3, 2])
 
@@ -32,91 +30,72 @@ with col2:
     preview_url = f"https://raw.githubusercontent.com/halitelli/sovepro/main/{selected_code}.png"
     st.image(preview_url, caption=f"{selected_code} - Sovetalya Söve", use_container_width=True)
 
-if st.button("🔥 SÖVEYİ OTURT - Nano Banana 2 ile", type="primary", use_container_width=True):
+if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_container_width=True):
     if not building_file:
         st.error("❌ Bina fotoğrafı yükleyin!")
-    elif not replicate_api_key:
+    elif not replicate_key:
         st.error("❌ Replicate API Key girin!")
     else:
-        with st.spinner("Nano Banana 2 çalışıyor..."):
+        with st.spinner("FLUX Kontext Pro çalışıyor... (Genellikle 8-20 saniye)"):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                Bu binadaki TÜM pencerelere ve balkon kapılarına {selected_code} kodlu 
-                Sovetalya XPS dekoratif söve modelini uygula. 
-                Mükemmel perspektif, gerçekçi ışık ve gölge, cam yansıması, seamless blending yap.
-                Söveler orijinal ürün kalitesinde ve doğal dursun. 
-                Binanın diğer hiçbir kısmını değiştirme. 
-                Profesyonel mimari render kalitesi.
+                Add the exact {selected_code} Sovetalya XPS decorative window molding to ALL windows and balcony doors on this building.
+                Perfect perspective match, realistic lighting, shadows, glass reflections and seamless blending.
+                The moldings must look like the original physical product. Do not change anything else on the building.
+                Professional architectural visualization quality.
                 """
 
-                # Prediction oluştur
-                create_response = requests.post(
+                response = requests.post(
                     "https://api.replicate.com/v1/predictions",
                     headers={
-                        "Authorization": f"Token {replicate_api_key}",
+                        "Authorization": f"Token {replicate_key}",
                         "Content-Type": "application/json"
                     },
                     json={
-                        "version": "google/nano-banana-2",   # En güncel versiyonu Replicate'ten kontrol et
+                        "version": "black-forest-labs/flux-kontext-pro",   # En güçlü versiyon
                         "input": {
-                            "image": f"data:image/jpeg;base64,{building_b64}",
                             "prompt": prompt.strip(),
+                            "image": f"data:image/jpeg;base64,{building_b64}",
                             "num_outputs": 1,
-                            "quality": "high"
+                            "aspect_ratio": "original"
                         }
                     }
                 )
 
-                if create_response.status_code != 201:
-                    st.error("Prediction başlatılamadı")
-                    st.json(create_response.json())
+                if response.status_code != 201:
+                    st.error("Başlatılamadı")
+                    st.json(response.json())
                     st.stop()
 
-                prediction = create_response.json()
-                prediction_id = prediction["id"]
-
-                st.info(f"Prediction ID: {prediction_id} - İşleniyor...")
+                pred = response.json()
+                pred_id = pred["id"]
 
                 # Polling
-                for _ in range(60):  # Max 2 dakika bekle
-                    time.sleep(3)
-                    
-                    get_response = requests.get(
-                        f"https://api.replicate.com/v1/predictions/{prediction_id}",
-                        headers={"Authorization": f"Token {replicate_api_key}"}
+                for _ in range(40):
+                    time.sleep(2.5)
+                    r = requests.get(
+                        f"https://api.replicate.com/v1/predictions/{pred_id}",
+                        headers={"Authorization": f"Token {replicate_key}"}
                     )
-                    
-                    result = get_response.json()
-                    status = result.get("status")
+                    data = r.json()
+                    status = data.get("status")
 
                     if status == "succeeded":
-                        output_url = result["output"][0] if isinstance(result.get("output"), list) else result.get("output")
-                        if output_url:
-                            img_data = requests.get(output_url).content
-                            st.success("✅ Nano Banana 2 ile işlem tamamlandı!")
-                            st.image(img_data, caption="Sonuç", use_container_width=True)
-                            
-                            st.download_button(
-                                "📥 Sonucu İndir",
-                                data=img_data,
-                                file_name=f"sove_{selected_code}_nanob2.jpg",
-                                mime="image/jpeg"
-                            )
+                        output_url = data["output"][0]
+                        img_data = requests.get(output_url).content
+                        st.success("✅ FLUX Kontext Pro ile tamamlandı!")
+                        st.image(img_data, caption="Sonuç", use_container_width=True)
+                        st.download_button("📥 İndir", img_data, f"sove_{selected_code}_flux.jpg", "image/jpeg")
                         break
                     elif status in ["failed", "canceled"]:
-                        st.error(f"İşlem başarısız: {result.get('error')}")
-                        st.json(result)
+                        st.error("İşlem başarısız oldu")
+                        st.json(data)
                         break
-                    else:
-                        st.info(f"Durum: {status}... Bekleniyor.")
-
                 else:
-                    st.warning("İşlem çok uzun sürdü. Tekrar deneyin.")
+                    st.warning("Çok uzun sürdü, tekrar deneyin.")
 
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
-
-st.caption(f"**Versiyon:** {VERSION}")
