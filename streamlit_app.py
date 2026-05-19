@@ -3,12 +3,12 @@ import requests
 import base64
 import time
 
-VERSION = "v1.8 - FLUX Kontext Pro (Ultra Katı Koruma)"
+VERSION = "v1.8 - FLUX Output Fix"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 
 st.title("🏠 Söve Oturucu Pro - FLUX.1 Kontext Pro")
-st.caption(f"**Versiyon:** {VERSION} | Ultra Koruma Modu")
+st.caption(f"**Versiyon:** {VERSION}")
 
 with st.sidebar:
     st.header("🔑 Replicate API Key")
@@ -31,7 +31,7 @@ with col2:
     try:
         st.image(preview_url, caption=f"{selected_code} - Sovetalya Söve", use_container_width=True)
     except:
-        st.warning(f"{selected_code}.png önizlemesi yüklenemedi.")
+        st.warning(f"⚠️ Önizleme yüklenemedi: {selected_code}.png")
 
 if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_container_width=True):
     if not building_file:
@@ -39,25 +39,19 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
     elif not replicate_key:
         st.error("❌ Replicate API Key girin!")
     else:
-        with st.spinner("FLUX çalışıyor..."):
+        with st.spinner("FLUX Kontext Pro çalışıyor..."):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
 
                 prompt = f"""
-                This is a precise architectural photo editing task.
-
-                STRICT RULES:
-                - ONLY add {selected_code} Sovetalya XPS window molding to ALL existing windows and balcony doors.
-                - Do NOT change the building's architecture, shape, materials, color, texture, lighting, background, or any other element.
-                - Keep the exact same building structure, windows positions, and proportions.
-                - The new moldings must blend seamlessly as if they were physically installed.
-                - Photorealistic, professional architectural edit.
-
-                Do not generate a new building. Edit the existing image only on the window frames.
+                ONLY edit the windows and balcony doors of this exact building.
+                Add {selected_code} Sovetalya XPS decorative molding to every window and balcony door.
+                Keep the entire building, structure, walls, colors, textures, and background 100% unchanged.
+                Perfect perspective and seamless realistic installation.
                 """
 
-                response = requests.post(
+                resp = requests.post(
                     "https://api.replicate.com/v1/predictions",
                     headers={"Authorization": f"Token {replicate_key}", "Content-Type": "application/json"},
                     json={
@@ -71,7 +65,12 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
                     }
                 )
 
-                pred_id = response.json()["id"]
+                if resp.status_code != 201:
+                    st.error("Başlatma hatası")
+                    st.json(resp.json())
+                    st.stop()
+
+                pred_id = resp.json()["id"]
 
                 for _ in range(60):
                     time.sleep(3)
@@ -80,17 +79,36 @@ if st.button("🔥 SÖVEYİ OTURT - FLUX Kontext Pro ile", type="primary", use_c
                         headers={"Authorization": f"Token {replicate_key}"}
                     ).json()
 
-                    if data.get("status") == "succeeded":
-                        output_url = data["output"][0]
-                        img_data = requests.get(output_url).content
-                        st.success("✅ Tamamlandı!")
-                        st.image(img_data, caption="Sonuç", use_container_width=True)
-                        st.download_button("📥 İndir", img_data, f"sove_{selected_code}.jpg", "image/jpeg")
-                        break
-                    elif data.get("status") in ["failed", "canceled"]:
-                        st.error("Başarısız")
-                        st.json(data)
+                    status = data.get("status")
+                    if status == "succeeded":
+                        output = data.get("output")
+                        
+                        # Güvenli URL çıkarma
+                        if isinstance(output, list) and len(output) > 0:
+                            url = output[0]
+                        elif isinstance(output, str):
+                            url = output
+                        else:
+                            url = None
+
+                        if url and isinstance(url, str) and url.startswith("http"):
+                            img_data = requests.get(url).content
+                            st.success("✅ Tamamlandı!")
+                            st.image(img_data, caption="Sonuç", use_container_width=True)
+                            st.download_button("📥 İndir", img_data, f"sove_{selected_code}.jpg", "image/jpeg")
+                        else:
+                            st.error("URL alınamadı")
+                            st.json(data)
                         break
 
+                    elif status in ["failed", "canceled"]:
+                        st.error("İşlem başarısız")
+                        st.json(data)
+                        break
+                    else:
+                        st.info(f"Durum: {status}")
+
             except Exception as e:
-                st.error(f"Hata: {str(e)}")
+                st.error(f"Genel Hata: {str(e)}")
+
+st.caption(f"**Versiyon:** {VERSION}")
