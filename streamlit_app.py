@@ -1,19 +1,20 @@
 import streamlit as st
 import requests
 import base64
+import time
+from PIL import Image
 
-VERSION = "v1.5 - Nano Banana 2 Edition - 19 Mayıs 2026"
+VERSION = "v1.5 - Nano Banana 2 Polling Edition - 19 Mayıs 2026"
 
 st.set_page_config(page_title="Söve Oturucu Pro", page_icon="🏠", layout="wide")
 
-st.title("🏠 Söve Oturucu Pro - Nano Banana 2 (Google)")
-st.caption(f"**Versiyon:** {VERSION} | Hızlı & Güçlü Editing")
+st.title("🏠 Söve Oturucu Pro - Nano Banana 2")
+st.caption(f"**Versiyon:** {VERSION}")
 
-# Sidebar
 with st.sidebar:
     st.header("🔑 Replicate API Key")
     replicate_api_key = st.text_input("Replicate API Key", type="password", 
-                                      help="https://replicate.com/account/api-tokens adresinden al")
+                                      help="replicate.com/account/api-tokens")
 
 col1, col2 = st.columns([3, 2])
 
@@ -37,7 +38,7 @@ if st.button("🔥 SÖVEYİ OTURT - Nano Banana 2 ile", type="primary", use_cont
     elif not replicate_api_key:
         st.error("❌ Replicate API Key girin!")
     else:
-        with st.spinner("Nano Banana 2 çalışıyor... (Genellikle 8-20 saniye)"):
+        with st.spinner("Nano Banana 2 çalışıyor..."):
             try:
                 building_bytes = building_file.getvalue()
                 building_b64 = base64.b64encode(building_bytes).decode()
@@ -46,36 +47,74 @@ if st.button("🔥 SÖVEYİ OTURT - Nano Banana 2 ile", type="primary", use_cont
                 Bu binadaki TÜM pencerelere ve balkon kapılarına {selected_code} kodlu 
                 Sovetalya XPS dekoratif söve modelini uygula. 
                 Mükemmel perspektif, gerçekçi ışık ve gölge, cam yansıması, seamless blending yap.
-                Söveler orijinal ürün kalitesinde ve doğal dursun. Binanın diğer hiçbir kısmını değiştirme.
+                Söveler orijinal ürün kalitesinde ve doğal dursun. 
+                Binanın diğer hiçbir kısmını değiştirme. 
                 Profesyonel mimari render kalitesi.
                 """
 
-                response = requests.post(
+                # Prediction oluştur
+                create_response = requests.post(
                     "https://api.replicate.com/v1/predictions",
                     headers={
                         "Authorization": f"Token {replicate_api_key}",
                         "Content-Type": "application/json"
                     },
                     json={
-                        "version": "google/nano-banana-2",   # veya en güncel versiyon
+                        "version": "google/nano-banana-2",   # En güncel versiyonu Replicate'ten kontrol et
                         "input": {
                             "image": f"data:image/jpeg;base64,{building_b64}",
                             "prompt": prompt.strip(),
                             "num_outputs": 1,
                             "quality": "high"
                         }
-                    },
-                    timeout=120
+                    }
                 )
 
-                if response.status_code == 201:
-                    st.success("✅ İşlem kuyruğa alındı...")
-                    prediction = response.json()
-                    # Burada polling yapılabilir ama basit tutuyoruz
-                    st.json(prediction)  # Debug için
+                if create_response.status_code != 201:
+                    st.error("Prediction başlatılamadı")
+                    st.json(create_response.json())
+                    st.stop()
+
+                prediction = create_response.json()
+                prediction_id = prediction["id"]
+
+                st.info(f"Prediction ID: {prediction_id} - İşleniyor...")
+
+                # Polling
+                for _ in range(60):  # Max 2 dakika bekle
+                    time.sleep(3)
+                    
+                    get_response = requests.get(
+                        f"https://api.replicate.com/v1/predictions/{prediction_id}",
+                        headers={"Authorization": f"Token {replicate_api_key}"}
+                    )
+                    
+                    result = get_response.json()
+                    status = result.get("status")
+
+                    if status == "succeeded":
+                        output_url = result["output"][0] if isinstance(result.get("output"), list) else result.get("output")
+                        if output_url:
+                            img_data = requests.get(output_url).content
+                            st.success("✅ Nano Banana 2 ile işlem tamamlandı!")
+                            st.image(img_data, caption="Sonuç", use_container_width=True)
+                            
+                            st.download_button(
+                                "📥 Sonucu İndir",
+                                data=img_data,
+                                file_name=f"sove_{selected_code}_nanob2.jpg",
+                                mime="image/jpeg"
+                            )
+                        break
+                    elif status in ["failed", "canceled"]:
+                        st.error(f"İşlem başarısız: {result.get('error')}")
+                        st.json(result)
+                        break
+                    else:
+                        st.info(f"Durum: {status}... Bekleniyor.")
+
                 else:
-                    st.error(f"API Hatası: {response.status_code}")
-                    st.code(response.text)
+                    st.warning("İşlem çok uzun sürdü. Tekrar deneyin.")
 
             except Exception as e:
                 st.error(f"Hata: {str(e)}")
